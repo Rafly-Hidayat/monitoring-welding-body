@@ -8,6 +8,7 @@ class AuthError extends Error {
     constructor(statusCode, message) {
         super(message);
         this.name = 'AuthError';
+        this.statusCode = statusCode;
     }
 }
 
@@ -49,7 +50,7 @@ export const hasPermission = (permissionCode) => {
             }
 
             const user = await prisma.user.findUnique({
-                where: { id: req.user.userId },
+                where: { ulid: req.user.userId },
                 include: {
                     role: {
                         include: {

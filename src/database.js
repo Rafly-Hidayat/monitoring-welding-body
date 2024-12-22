@@ -17,8 +17,16 @@ async function main() {
             where: { code: 'user.read' },
             update: {},
             create: {
-                name: 'Read User',
+                name: 'Read Users',
                 code: 'user.read',
+            },
+        }),
+        prisma.permission.upsert({
+            where: { code: 'user.show' },
+            update: {},
+            create: {
+                name: 'Show User',
+                code: 'user.show',
             },
         }),
         prisma.permission.upsert({
@@ -61,14 +69,14 @@ async function main() {
         where: { code: 'operation' },
         update: {
             permissions: {
-                connect: [{ code: 'user.read' }],
+                connect: [{ code: 'user.read' }, { code: 'user.show' }],
             },
         },
         create: {
             description: 'Operation',
             code: 'operation',
             permissions: {
-                connect: [{ code: 'user.read' }],
+                connect: [{ code: 'user.read' }, { code: 'user.show' }],
             },
         },
     })
@@ -83,6 +91,7 @@ async function main() {
         update: {},
         create: {
             name: 'Default Admin',
+            email: 'defaultadmin@gmail.com',
             username: 'admin',
             password: defaultPassword,
             roleId: adminRole.id
@@ -95,6 +104,7 @@ async function main() {
         update: {},
         create: {
             name: 'Default Operation',
+            email: 'defaultoperation@gmail.com',
             username: 'operation',
             password: defaultPassword,
             roleId: operationRole.id

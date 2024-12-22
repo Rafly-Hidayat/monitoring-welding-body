@@ -7,6 +7,7 @@ CREATE TABLE [dbo].[users] (
     [id] INT NOT NULL IDENTITY(1,1),
     [ulid] NVARCHAR(1000) NOT NULL,
     [name] NVARCHAR(1000) NOT NULL,
+    [email] NVARCHAR(1000) NOT NULL,
     [username] NVARCHAR(1000) NOT NULL,
     [password] NVARCHAR(1000) NOT NULL,
     [role_id] INT NOT NULL,
