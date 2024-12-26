@@ -1,115 +1,82 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcrypt'
+import * as XLSX from 'xlsx'
+import fs from 'fs'
+
 const prisma = new PrismaClient()
 
 async function main() {
+    const workbook = XLSX.read(fs.readFileSync('./prisma/seed/seed_data.xlsx'));
+
     // Create Permissions
-    const permissions = await Promise.all([
+    const permissions = XLSX.utils.sheet_to_json(workbook.Sheets['Permissions']);
+    await Promise.all(permissions.map(p =>
         prisma.permission.upsert({
-            where: { code: 'user.create' },
+            where: { code: p.code },
+            update: {},
+            create: p
+        })
+    ));
+
+    // Create Roles
+    const roles = XLSX.utils.sheet_to_json(workbook.Sheets['Roles']);
+    for (const role of roles) {
+        await prisma.role.upsert({
+            where: { code: role.code },
+            update: { description: role.description },
+            create: {
+                description: role.description,
+                code: role.code
+            }
+        });
+    }
+
+    // Assign Permissions to Roles
+    const rolePermissions = XLSX.utils.sheet_to_json(workbook.Sheets['RolePermissions']);
+    for (const rp of rolePermissions) {
+        await prisma.role.update({
+            where: { code: rp.roleCode },
+            data: {
+                permissions: {
+                    connect: { code: rp.permissionCode }
+                }
+            }
+        });
+    }
+
+    // Create Users
+    const users = XLSX.utils.sheet_to_json(workbook.Sheets['Users']);
+    const saltRounds = 10;
+
+    for (const user of users) {
+        const hashedPassword = await bcrypt.hash(user.password, saltRounds);
+        const role = await prisma.role.findUnique({
+            where: { code: user.roleCode }
+        });
+
+        await prisma.user.upsert({
+            where: { username: user.username },
             update: {},
             create: {
-                name: 'Create User',
-                code: 'user.create',
-            },
-        }),
-        prisma.permission.upsert({
-            where: { code: 'user.read' },
+                name: user.name,
+                email: user.email,
+                username: user.username,
+                password: hashedPassword,
+                roleId: role.id
+            }
+        });
+    }
+
+    // Create Assets
+    const assets = XLSX.utils.sheet_to_json(workbook.Sheets['Assets']);
+    for (const asset of assets) {
+        asset.value = asset.value.toString()
+        await prisma.asset.upsert({
+            where: { assetId: asset.assetId },
             update: {},
-            create: {
-                name: 'Read Users',
-                code: 'user.read',
-            },
-        }),
-        prisma.permission.upsert({
-            where: { code: 'user.show' },
-            update: {},
-            create: {
-                name: 'Show User',
-                code: 'user.show',
-            },
-        }),
-        prisma.permission.upsert({
-            where: { code: 'user.update' },
-            update: {},
-            create: {
-                name: 'Update User',
-                code: 'user.update',
-            },
-        }),
-        prisma.permission.upsert({
-            where: { code: 'user.delete' },
-            update: {},
-            create: {
-                name: 'Delete User',
-                code: 'user.delete',
-            },
-        }),
-    ])
-
-    // Create Admin Role with all permissions
-    const adminRole = await prisma.role.upsert({
-        where: { code: 'admin' },
-        update: {
-            permissions: {
-                connect: permissions.map(p => ({ id: p.id })),
-            },
-        },
-        create: {
-            description: 'Administrator',
-            code: 'admin',
-            permissions: {
-                connect: permissions.map(p => ({ id: p.id })),
-            },
-        },
-    })
-
-    // Create Operation Role with only read permission
-    const operationRole = await prisma.role.upsert({
-        where: { code: 'operation' },
-        update: {
-            permissions: {
-                connect: [{ code: 'user.read' }, { code: 'user.show' }],
-            },
-        },
-        create: {
-            description: 'Operation',
-            code: 'operation',
-            permissions: {
-                connect: [{ code: 'user.read' }, { code: 'user.show' }],
-            },
-        },
-    })
-
-    // Hash default password
-    const saltRounds = 10
-    const defaultPassword = await bcrypt.hash('password123', saltRounds)
-
-    // Create default admin user
-    await prisma.user.upsert({
-        where: { username: 'admin' },
-        update: {},
-        create: {
-            name: 'Default Admin',
-            email: 'defaultadmin@gmail.com',
-            username: 'admin',
-            password: defaultPassword,
-            roleId: adminRole.id
-        },
-    })
-
-    // Create default operation user
-    await prisma.user.upsert({
-        where: { username: 'operation' },
-        update: {},
-        create: {
-            name: 'Default Operation',
-            email: 'defaultoperation@gmail.com',
-            username: 'operation',
-            password: defaultPassword,
-            roleId: operationRole.id
-        },
-    })
+            create: asset
+        });
+    }
 }
 
 main()

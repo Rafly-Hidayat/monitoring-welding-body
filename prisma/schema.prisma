@@ -48,3 +48,17 @@ model Permission {
 
   @@map("permissions")
 }
+
+model Asset {
+  id        Int      @id @default(autoincrement())
+  ulid      String   @unique @default(uuid())
+  assetId   String   @unique @map("asset_id")
+  ceCd      String   @map("ce_cd")
+  partCd    String   @map("part_cd")
+  tagCd     String   @map("tag_cd")
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("assets")
+}
