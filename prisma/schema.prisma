@@ -56,6 +56,8 @@ model Asset {
   ceCd      String   @map("ce_cd")
   partCd    String   @map("part_cd")
   tagCd     String   @map("tag_cd")
+  type      String
+  comment   String?
   value     String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
