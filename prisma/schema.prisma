@@ -52,7 +52,7 @@ model Permission {
 model Asset {
   id        Int      @id @default(autoincrement())
   ulid      String   @unique @default(uuid())
-  assetId   String   @unique @map("asset_id")
+  assetId   String   @map("asset_id")
   ceCd      String   @map("ce_cd")
   partCd    String   @map("part_cd")
   tagCd     String   @map("tag_cd")
