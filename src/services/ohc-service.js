@@ -33,7 +33,7 @@ const MONITORING_CONFIG = {
 };
 
 // Types
-class OHCData {
+export class OHCData {
     constructor({
         id,
         location,
@@ -67,7 +67,7 @@ class OHCData {
 }
 
 // Utility functions
-class TimeUtils {
+export class TimeUtils {
     static isWorkingDay() {
         const now = moment();
         const day = now.day();
@@ -98,7 +98,7 @@ class TimeUtils {
     }
 }
 
-class MetricsCalculator {
+export class MetricsCalculator {
     static calculateEfficiency(runningTime, stopTime) {
         const total = runningTime + stopTime;
         return total > 0 ? Number((runningTime / total) * 100).toFixed(1) : '0.0';
@@ -158,7 +158,7 @@ class MetricsCalculator {
     }
 }
 
-class StatusManager {
+export class StatusManager {
     static determineStatus(location) {
         switch (location) {
             case LOCATIONS.SP8:
@@ -173,7 +173,7 @@ class StatusManager {
     }
 }
 
-class OHCMonitoringSystem {
+export class OHCMonitoringSystem {
     constructor() {
         this.ohcData = new Map();
     }
@@ -244,7 +244,7 @@ class OHCMonitoringSystem {
     }
 }
 
-class OHCMonitoringService {
+export class OHCMonitoringService {
     constructor() {
         this.ohcSystem = new OHCMonitoringSystem();
         this.monitoringJob = null;
@@ -319,16 +319,19 @@ class OHCMonitoringService {
     }
 
     updateOHCs() {
+        const getRandomVariation = (base, range) =>
+            base + (Math.random() * range * 2 - range);
+
         const updateData = {
             condition: 'No Body',
-            cycleTime: 98,
-            taktTime: 98,
-            currentMotorLifter: 230,
-            currentMotorTransfer: 150,
-            tempMotorLifter: 60,
-            tempMotorTransfer: 40,
-            okCondition: 843,
-            ngCondition: 157,
+            cycleTime: getRandomVariation(98, 5),
+            taktTime: getRandomVariation(98, 5),
+            currentMotorLifter: getRandomVariation(230, 20),
+            currentMotorTransfer: getRandomVariation(150, 15),
+            tempMotorLifter: getRandomVariation(60, 5),
+            tempMotorTransfer: getRandomVariation(40, 5),
+            okCondition: Math.floor(getRandomVariation(843, 50)),
+            ngCondition: Math.floor(getRandomVariation(157, 20)),
         };
 
         const updates = [
@@ -348,6 +351,7 @@ class OHCMonitoringService {
     }
 
     logStatus() {
+        console.log('object')
         console.log('Updating OHCs at:', TimeUtils.formatTime(TimeUtils.getCurrentTimestamp()));
 
         const ohcData = this.ohcSystem.monitorAllOHC();
@@ -358,11 +362,7 @@ class OHCMonitoringService {
             ohcs.push(JSON.parse(JSON.stringify(Object.fromEntries(element))))
         });
 
-        const result = {
-            summary, ohcs
-        }
-
-        console.log(result)
+        console.log({ summary, ohcs });
     }
 
     // Method to start the entire monitoring system
@@ -396,6 +396,3 @@ class OHCMonitoringService {
     }
 }
 
-// Initialize and start the monitoring service
-const monitoringService = new OHCMonitoringService();
-monitoringService.start();

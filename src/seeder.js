@@ -69,8 +69,9 @@ async function main() {
     const assets = XLSX.utils.sheet_to_json(workbook.Sheets['Assets']);
     for (const asset of assets) {
         asset.value = asset.value.toString()
+        asset.partCd = asset.partCd.toString().padStart(4, "0")
         await prisma.asset.upsert({
-            where: { assetId: asset.assetId },
+            where: { tagCd: asset.tagCd },
             update: {},
             create: asset
         });

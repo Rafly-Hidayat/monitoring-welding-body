@@ -55,7 +55,7 @@ model Asset {
   assetId   String   @map("asset_id")
   ceCd      String   @map("ce_cd")
   partCd    String   @map("part_cd")
-  tagCd     String   @map("tag_cd")
+  tagCd     String   @unique @map("tag_cd")
   type      String
   comment   String?
   value     String
