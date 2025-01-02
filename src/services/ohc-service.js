@@ -322,6 +322,8 @@ export class OHCMonitoringService {
         const getRandomVariation = (base, range) =>
             base + (Math.random() * range * 2 - range);
 
+        const getRandomSPLocation = () => `SP${Math.floor(Math.random() * 8) + 1}`;
+
         const updateData = {
             condition: 'No Body',
             cycleTime: getRandomVariation(98, 5),
@@ -334,14 +336,11 @@ export class OHCMonitoringService {
             ngCondition: Math.floor(getRandomVariation(157, 20)),
         };
 
-        const updates = [
-            { id: 1, location: 'SP2' },
-            { id: 2, location: 'SP2' },
-            { id: 3, location: 'SP1' },
-            { id: 4, location: 'SP7' },
-            { id: 5, location: 'SP8' },
-            { id: 6, location: 'SP8' },
-        ];
+        // Instead of fixed locations, generate random ones
+        const updates = Array.from({ length: 6 }, (_, index) => ({
+            id: index + 1,
+            location: getRandomSPLocation()
+        }));
 
         updates.forEach(({ id, location }) => {
             this.ohcSystem.updateOHCStatus(id, { ...updateData, location });
@@ -351,7 +350,6 @@ export class OHCMonitoringService {
     }
 
     logStatus() {
-        console.log('object')
         console.log('Updating OHCs at:', TimeUtils.formatTime(TimeUtils.getCurrentTimestamp()));
 
         const ohcData = this.ohcSystem.monitorAllOHC();

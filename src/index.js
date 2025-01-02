@@ -93,7 +93,7 @@ app.use("*", function (req, res) {
 
 // Start the monitoring service with immediate monitoring
 ohcService.start();
-ohcService.startMonitoringJob(); // Explicitly start the monitoring job
+// ohcService.startMonitoringJob(); // Explicitly start the monitoring job
 
 // Start the server
 httpServer.listen(port, () => {
