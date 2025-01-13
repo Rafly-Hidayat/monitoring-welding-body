@@ -50,17 +50,98 @@ model Permission {
 }
 
 model Asset {
-  id        Int      @id @default(autoincrement())
-  ulid      String   @unique @default(uuid())
-  assetId   String   @map("asset_id")
-  ceCd      String   @map("ce_cd")
-  partCd    String   @map("part_cd")
-  tagCd     String   @unique @map("tag_cd")
-  type      String
-  comment   String?
-  value     String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             Int              @id @default(autoincrement())
+  ulid           String           @unique @default(uuid())
+  assetId        String           @map("asset_id")
+  ceCd           String           @map("ce_cd")
+  partCd         String           @map("part_cd")
+  tagCd          String           @unique @map("tag_cd")
+  type           String
+  comment        String?
+  value          String
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  spDescription  SpDescription[]
+  ohcDescription OhcDescription[]
 
   @@map("assets")
+}
+
+model Cycle {
+  id               Int                @id @default(autoincrement())
+  ulid             String             @unique @default(uuid())
+  name             String
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  sp               Sp[]
+  ohc              Ohc[]
+  cycleDescription CycleDescription[]
+
+  @@map("cycles")
+}
+
+model Sp {
+  id              Int           @id @default(autoincrement())
+  ulid            String        @unique @default(uuid())
+  name            String
+  cycleId         Int           @map("cycle_id")
+  spDescriptionId Int           @map("sp_description_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  cycle           Cycle         @relation(fields: [cycleId], references: [id])
+  spDescription   SpDescription @relation(fields: [spDescriptionId], references: [id])
+
+  @@map("sp")
+}
+
+model SpDescription {
+  id        Int      @id @default(autoincrement())
+  ulid      String   @unique @default(uuid())
+  assetId   Int      @map("asset_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  asset     Asset    @relation(fields: [assetId], references: [id])
+  sp        Sp[]
+
+  @@map("sp_descriptions")
+}
+
+model Ohc {
+  id               Int            @id @default(autoincrement())
+  ulid             String         @unique @default(uuid())
+  name             String
+  cycleId          Int            @map("cycle_id")
+  ohcDescriptionId Int            @map("ohc_description_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  cycle            Cycle          @relation(fields: [cycleId], references: [id])
+  ohcDescription   OhcDescription @relation(fields: [ohcDescriptionId], references: [id])
+
+  @@map("ohc")
+}
+
+model OhcDescription {
+  id        Int      @id @default(autoincrement())
+  ulid      String   @unique @default(uuid())
+  assetId   Int      @map("asset_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  asset     Asset    @relation(fields: [assetId], references: [id])
+  ohc       Ohc[]
+
+  @@map("ohc_descriptions")
+}
+
+model CycleDescription {
+  id            Int      @id @default(autoincrement())
+  ulid          String   @unique @default(uuid())
+  name          String
+  actualValue   Int      @map("actual_value")
+  standardValue Int      @map("standard_value")
+  cycleId       Int      @map("cycle_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  cycle         Cycle    @relation(fields: [cycleId], references: [id])
+
+  @@map("cycle_descriptions")
 }
