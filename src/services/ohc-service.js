@@ -94,7 +94,7 @@ export class OHCMonitoringSystem {
 
         // Update calculated metrics for each OHC
         for (const ohc of ohcs) {
-            const { status, isRunning, isStopped } = this.determineStatus(ohc.name);
+            const { status, isRunning, isStopped } = this.determineStatus(ohc.sp[0].name);
 
             const runningTime = Number(ohc.runningTime) + (isRunning ? 1 : 0);
             const stopTime = Number(ohc.stopTime) + (isStopped ? 1 : 0);
@@ -124,33 +124,49 @@ export class OHCMonitoringSystem {
         }
     }
 
-    determineStatus(sp) {
-        if (sp === 'OHC1' || sp === 'OHC2') {
-            return { status: 'Ready', isRunning: true, isStopped: false };
-        } else if (sp === 'OHC3' || sp === 'OHC4') {
-            return { status: 'Repair', isRunning: true, isStopped: false };
-        } else {
-            return { status: 'NG', isRunning: false, isStopped: true };
+    determineStatus(location) {
+        switch (location) {
+            case 'SP8':
+                return { status: 'Ready', isRunning: true, isStopped: false };
+            case 'SP7':
+                return { status: 'Repair', isRunning: true, isStopped: false };
+            case 'SP1':
+                return { status: 'NG', isRunning: false, isStopped: true };
+            default:
+                return { status: '', isRunning: false, isStopped: false };
         }
     }
 
     async getOHCMetrics() {
         const ohcData = await prisma.ohc.findMany({
-            orderBy: { name: 'asc' }
+            orderBy: { name: 'asc' },
+            include: {
+                sp: true,
+                cycle: { include: { cycleDescription: true } },
+                ohcDescriptions: { include: { asset: true } },
+            }
+        });
+
+        const sp = await prisma.sp.findMany({
+            orderBy: { name: 'asc' },
+            include: {
+                ohc: { select: { name: true } },
+                cycle: { include: { cycleDescription: true } },
+                spDescriptions: { include: { asset: true } },
+            }
         });
 
         // Contoh fungsi helper untuk mengkonversi BigInt
         const convertBigIntToNumber = (data) => {
             return JSON.parse(JSON.stringify(data, (key, value) =>
                 typeof value === 'bigint'
-                    ? Number(value)  // atau String(value) jika nilainya sangat besar
+                    ? Number(value)
                     : value
             ));
         };
 
         // Penggunaan
-        const ohcs = convertBigIntToNumber(ohcData);
-
+        let ohcs = convertBigIntToNumber(ohcData);
         const summary = {
             runningTime: TimeUtils.formatDuration(ohcs.reduce((sum, ohc) => sum + Number(ohc.runningTime), 0) / ohcs.length),
             stopTime: TimeUtils.formatDuration(ohcs.reduce((sum, ohc) => sum + Number(ohc.stopTime), 0) / ohcs.length),
@@ -158,7 +174,16 @@ export class OHCMonitoringSystem {
             performance: (ohcs.reduce((sum, ohc) => sum + Number(ohc.performance), 0) / ohcs.length).toFixed(1),
         };
 
-        return { summary, ohcs };
+        ohcs = ohcs.map(element => {
+            return {
+                ...element,
+                runningTime: TimeUtils.formatDuration(element.runningTime),
+                stopTime: TimeUtils.formatDuration(element.stopTime),
+                cycleTime: TimeUtils.formatDuration(element.cycleTime)
+            }
+        });
+
+        return { summary, ohcs, sp };
     }
 }
 
