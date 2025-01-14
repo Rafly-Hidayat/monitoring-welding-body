@@ -96,11 +96,11 @@ const updateAssetInterval = async () => {
                 where: { id: ohc.id },
                 data: {
                     condition: 'No Body',
-                    cycleTime: BigInt(getRandomVariation(98, 5)),
-                    currentMotorLifter: BigInt(getRandomVariation(230, 20)),
-                    currentMotorTransfer: BigInt(getRandomVariation(150, 15)),
-                    tempMotorLifter: BigInt(getRandomVariation(60, 5)),
-                    tempMotorTransfer: BigInt(getRandomVariation(40, 5)),
+                    cycleTime: getRandomVariation(98, 5),
+                    currentMotorLifter: getRandomVariation(230, 20),
+                    currentMotorTransfer: getRandomVariation(150, 15),
+                    tempMotorLifter: getRandomVariation(60, 5),
+                    tempMotorTransfer: getRandomVariation(40, 5),
                     okCondition: Math.floor(getRandomVariation(843, 50)),
                     ngCondition: Math.floor(getRandomVariation(157, 20)),
                 }

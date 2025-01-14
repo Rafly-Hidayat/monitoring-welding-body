@@ -41,6 +41,10 @@ export class TimeUtils {
         return isShift1 || isShift2;
     }
 
+    static formatDuration(seconds) {
+        return moment.utc(seconds * 1000).format('HH:mm:ss');
+    }
+
     static formatTime(momentDate) {
         return momentDate.format('HH:mm:ss');
     }
@@ -57,8 +61,8 @@ export class MetricsCalculator {
     }
 
     static calculatePerformance(okCondition, ngCondition) {
-        const total = okCondition + ngCondition;
-        return total > 0 ? Number((okCondition / total) * 100).toFixed(1) : '0.0';
+        const total = Number(okCondition) + Number(ngCondition);
+        return total > 0 ? Number((Number(okCondition) / total) * 100).toFixed(1) : '0.0';
     }
 
     static isOutOfRange(value, min, max) {
@@ -81,7 +85,7 @@ export class OHCMonitoringSystem {
     async updateOHCs() {
         // Get all OHCs before update
         const ohcs = await prisma.ohc.findMany({
-            includes: { sp: true }
+            include: { sp: true }
         });
         console.log(ohcs)
 
@@ -110,8 +114,8 @@ export class OHCMonitoringSystem {
                 where: { id: ohc.id },
                 data: {
                     status,
-                    runningTime: BigInt(runningTime),
-                    stopTime: BigInt(stopTime),
+                    runningTime: runningTime,
+                    stopTime: stopTime,
                     efficiency: parseFloat(efficiency),
                     performance: parseFloat(performance),
                     abnormalityCount
@@ -120,10 +124,10 @@ export class OHCMonitoringSystem {
         }
     }
 
-    determineStatus(location) {
-        if (location === 'OHC1' || location === 'OHC2') {
+    determineStatus(sp) {
+        if (sp === 'OHC1' || sp === 'OHC2') {
             return { status: 'Ready', isRunning: true, isStopped: false };
-        } else if (location === 'OHC3' || location === 'OHC4') {
+        } else if (sp === 'OHC3' || sp === 'OHC4') {
             return { status: 'Repair', isRunning: true, isStopped: false };
         } else {
             return { status: 'NG', isRunning: false, isStopped: true };
@@ -131,15 +135,27 @@ export class OHCMonitoringSystem {
     }
 
     async getOHCMetrics() {
-        const ohcs = await prisma.ohc.findMany({
+        const ohcData = await prisma.ohc.findMany({
             orderBy: { name: 'asc' }
         });
 
+        // Contoh fungsi helper untuk mengkonversi BigInt
+        const convertBigIntToNumber = (data) => {
+            return JSON.parse(JSON.stringify(data, (key, value) =>
+                typeof value === 'bigint'
+                    ? Number(value)  // atau String(value) jika nilainya sangat besar
+                    : value
+            ));
+        };
+
+        // Penggunaan
+        const ohcs = convertBigIntToNumber(ohcData);
+
         const summary = {
-            runningTime: ohcs.reduce((sum, ohc) => sum + Number(ohc.runningTime), 0) / ohcs.length,
-            stopTime: ohcs.reduce((sum, ohc) => sum + Number(ohc.stopTime), 0) / ohcs.length,
-            efficiency: ohcs.reduce((sum, ohc) => sum + Number(ohc.efficiency), 0) / ohcs.length,
-            performance: ohcs.reduce((sum, ohc) => sum + Number(ohc.performance), 0) / ohcs.length
+            runningTime: TimeUtils.formatDuration(ohcs.reduce((sum, ohc) => sum + Number(ohc.runningTime), 0) / ohcs.length),
+            stopTime: TimeUtils.formatDuration(ohcs.reduce((sum, ohc) => sum + Number(ohc.stopTime), 0) / ohcs.length),
+            efficiency: (ohcs.reduce((sum, ohc) => sum + Number(ohc.efficiency), 0) / ohcs.length).toFixed(1),
+            performance: (ohcs.reduce((sum, ohc) => sum + Number(ohc.performance), 0) / ohcs.length).toFixed(1),
         };
 
         return { summary, ohcs };
