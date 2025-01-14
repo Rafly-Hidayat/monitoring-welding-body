@@ -70,73 +70,80 @@ const getRandomIntInclusive = (min, max) => {
     const maxFloored = Math.floor(max);
     return Math.floor(Math.random() * (maxFloored - minCeiled + 1) + minCeiled);
 };
+const getRandomVariation = (base, range) => {
+    return Math.floor(base + (Math.random() * range * 2 - range));
+};
 
 const updateAssetInterval = async () => {
+    // SP Location updates
     const sps = [
-        'EM1001',
-        'EM1004',
-        'EM1007',
-        'EM100B',
-        'EM100F',
-        'EM1011',
-        'EM1015',
-        'EM101C',
-        'EM1021',
+        'EM1001', 'EM1004', 'EM1007', 'EM100B',
+        'EM100F', 'EM1011', 'EM1015', 'EM101C', 'EM1021',
     ];
 
-    const updateSps = async () => {
-        // Update each SP asset with a random value
-        const updatePromises = sps.map(tagCd =>
-            prisma.asset.update({
-                where: {
-                    tagCd: tagCd
-                },
+    // Update each SP asset with a random OHC assignment
+    const updatePromises = sps.map(async (tagCd) => {
+        const value = getRandomIntInclusive(0, 6).toString();
+
+        // Find corresponding OHC
+        const ohc = await prisma.Ohc.findFirst({
+            where: { name: `OHC${value}` }
+        });
+
+        if (ohc) {
+            // Update OHC metrics - only updating the base values, not the calculations
+            await prisma.Ohc.update({
+                where: { id: ohc.id },
                 data: {
-                    value: getRandomIntInclusive(0, 6).toString()
+                    condition: 'No Body',
+                    cycleTime: BigInt(getRandomVariation(98, 5)),
+                    currentMotorLifter: BigInt(getRandomVariation(230, 20)),
+                    currentMotorTransfer: BigInt(getRandomVariation(150, 15)),
+                    tempMotorLifter: BigInt(getRandomVariation(60, 5)),
+                    tempMotorTransfer: BigInt(getRandomVariation(40, 5)),
+                    okCondition: Math.floor(getRandomVariation(843, 50)),
+                    ngCondition: Math.floor(getRandomVariation(157, 20)),
                 }
-            })
-        );
+            });
+        }
 
-        // Execute all updates in parallel
-        const results = await Promise.all(updatePromises);
-        return results;
-    }
+        return prisma.asset.update({
+            where: { tagCd: tagCd },
+            data: { value }
+        });
+    });
 
+    // Execute SP updates
+    await Promise.all(updatePromises);
+
+    // Sensor updates for different locations
     const allSensors = {
         sp1: ['X700', 'X701', 'X702', 'X703'],
         sp7: ['X740', 'X741', 'X742', 'X743', 'X750', 'X751', 'X752'],
         sp8: ['X7A8', 'X7A9', 'X7AA', 'X7AB', 'X7B1', 'X7B2'],
         ohc1: [
-            'X020',
-            'X021',
-            'X022',
-            'X023',
-            'X024',
-            'X025',
-            'X026',
-            'X027',
-            'X028',
-            'X029',
-            'X02A',
-            'X02B',
-            'X02C',
-            'X02D',
-            'X02E',
-            'X02F',
+            'X020', 'X021', 'X022', 'X023', 'X024', 'X025',
+            'X026', 'X027', 'X028', 'X029', 'X02A', 'X02B',
+            'X02C', 'X02D', 'X02E', 'X02F',
         ],
-    }
+    };
 
+    // Update sensor values
+    const sensorUpdates = [];
     for (const [groupName, sensors] of Object.entries(allSensors)) {
         for (const tagCd of sensors) {
-            await prisma.asset.update({
-                where: { tagCd },
-                data: {
-                    value: getRandomIntInclusive(0, 1).toString()
-                }
-            });
+            sensorUpdates.push(
+                prisma.asset.update({
+                    where: { tagCd },
+                    data: {
+                        value: getRandomIntInclusive(0, 1).toString()
+                    }
+                })
+            );
         }
-        console.log(`Updated ${groupName} sensors`);
     }
-}
 
-export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset }
+    await Promise.all(sensorUpdates);
+};
+
+export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, updateAssetInterval }

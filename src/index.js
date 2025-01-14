@@ -6,7 +6,7 @@ import router from "./router/router.js";
 import authRouter from "./router/auth-router.js";
 import { errorMiddleware } from "./middleware/err-middleware.js";
 import { verifyToken } from "./middleware/auth-middleware.js";
-import { MetricsCalculator, OHCMonitoringService } from "./services/ohc-service.js";
+import { OHCMonitoringService } from "./services/ohc-service.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -27,19 +27,15 @@ const port = 8000;
 const ohcService = new OHCMonitoringService();
 
 // Override the logStatus method to emit data through Socket.IO
-ohcService.logStatus = function () {
+ohcService.logStatus = async function () {
     try {
-        const ohcData = this.ohcSystem.monitorAllOHC();
-        const summary = MetricsCalculator.generateMetricsSummary(ohcData);
-        const ohcs = Array.from(ohcData.values()).map(element =>
-            Object.fromEntries(element)
-        );
+        const metrics = await this.ohcSystem.getOHCMetrics();
 
         // Debug logging to verify data generation
         console.log('Generating OHC status update at:', new Date().toISOString());
 
         // Emit the data to all connected clients
-        io.emit('ohcStatus', { summary, ohcs });
+        io.emit('ohcStatus', metrics);
 
         // Debug logging to confirm emission
         console.log('Emitted OHC status to', io.engine.clientsCount, 'clients');
@@ -49,17 +45,13 @@ ohcService.logStatus = function () {
 };
 
 // Socket.IO connection handling
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
     console.log('Client connected:', socket.id);
 
     // Send initial data when client connects
     try {
-        const ohcData = ohcService.ohcSystem.monitorAllOHC();
-        const summary = MetricsCalculator.generateMetricsSummary(ohcData);
-        const ohcs = Array.from(ohcData.values()).map(element =>
-            Object.fromEntries(element)
-        );
-        socket.emit('ohcStatus', { summary, ohcs });
+        const metrics = await ohcService.ohcSystem.getOHCMetrics();
+        socket.emit('ohcStatus', metrics);
         console.log('Sent initial data to client:', socket.id);
     } catch (error) {
         console.error('Error sending initial data:', error);
@@ -92,8 +84,9 @@ app.use("*", function (req, res) {
 });
 
 // Start the monitoring service with immediate monitoring
-ohcService.start();
-// ohcService.startMonitoringJob(); // Explicitly start the monitoring job
+ohcService.start().catch(error => {
+    console.error('Error starting OHC service:', error);
+});
 
 // Start the server
 httpServer.listen(port, () => {

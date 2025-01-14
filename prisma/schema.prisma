@@ -126,6 +126,8 @@ model Ohc {
   currentMotorTransfer BigInt           @default(0)
   tempMotorLifter      BigInt           @default(0)
   tempMotorTransfer    BigInt           @default(0)
+  okCondition          BigInt           @default(0)
+  ngCondition          BigInt           @default(0)
   abnormalityCount     Int              @default(0)
   cycleId              Int              @map("cycle_id")
   createdAt            DateTime         @default(now()) @map("created_at")
