@@ -63,6 +63,7 @@ model Asset {
   updatedAt      DateTime         @updatedAt @map("updated_at")
   spDescription  SpDescription[]
   ohcDescription OhcDescription[]
+  Sp             Sp[]
 
   @@map("assets")
 }
@@ -70,7 +71,7 @@ model Asset {
 model Cycle {
   id               Int                @id @default(autoincrement())
   ulid             String             @unique @default(uuid())
-  name             String
+  name             String             @unique
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
   sp               Sp[]
@@ -81,53 +82,70 @@ model Cycle {
 }
 
 model Sp {
-  id              Int           @id @default(autoincrement())
-  ulid            String        @unique @default(uuid())
-  name            String
-  cycleId         Int           @map("cycle_id")
-  spDescriptionId Int           @map("sp_description_id")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  cycle           Cycle         @relation(fields: [cycleId], references: [id])
-  spDescription   SpDescription @relation(fields: [spDescriptionId], references: [id])
+  id             Int             @id @default(autoincrement())
+  ulid           String          @unique @default(uuid())
+  name           String          @unique
+  cycleId        Int             @map("cycle_id")
+  ohcId          Int?            @map("ohc_id")
+  assetTagCd     String          @map("asset_tag_cd")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  cycle          Cycle           @relation(fields: [cycleId], references: [id])
+  ohc            Ohc?            @relation(fields: [ohcId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  asset          Asset           @relation(fields: [assetTagCd], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  spDescriptions SpDescription[]
 
   @@map("sp")
 }
 
 model SpDescription {
-  id        Int      @id @default(autoincrement())
-  ulid      String   @unique @default(uuid())
-  assetId   Int      @map("asset_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  asset     Asset    @relation(fields: [assetId], references: [id])
-  sp        Sp[]
+  id         Int      @id @default(autoincrement())
+  ulid       String   @unique @default(uuid())
+  spId       Int      @map("sp_id")
+  assetTagCd String   @map("asset_tag_cd")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  sp         Sp       @relation(fields: [spId], references: [id])
+  asset      Asset    @relation(fields: [assetTagCd], references: [tagCd])
 
   @@map("sp_descriptions")
 }
 
 model Ohc {
-  id               Int            @id @default(autoincrement())
-  ulid             String         @unique @default(uuid())
-  name             String
-  cycleId          Int            @map("cycle_id")
-  ohcDescriptionId Int            @map("ohc_description_id")
-  createdAt        DateTime       @default(now()) @map("created_at")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
-  cycle            Cycle          @relation(fields: [cycleId], references: [id])
-  ohcDescription   OhcDescription @relation(fields: [ohcDescriptionId], references: [id])
+  id                   Int              @id @default(autoincrement())
+  ulid                 String           @unique @default(uuid())
+  name                 String           @unique
+  condition            String           @default("")
+  status               String           @default("")
+  runningTime          BigInt           @default(0)
+  stopTime             BigInt           @default(0)
+  cycleTime            BigInt           @default(0)
+  efficiency           Float            @default(0.0)
+  performance          Float            @default(0.0)
+  currentMotorLifter   BigInt           @default(0)
+  currentMotorTransfer BigInt           @default(0)
+  tempMotorLifter      BigInt           @default(0)
+  tempMotorTransfer    BigInt           @default(0)
+  abnormalityCount     Int              @default(0)
+  cycleId              Int              @map("cycle_id")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+  cycle                Cycle            @relation(fields: [cycleId], references: [id])
+  sp                   Sp[]
+  ohcDescriptions      OhcDescription[]
 
   @@map("ohc")
 }
 
 model OhcDescription {
-  id        Int      @id @default(autoincrement())
-  ulid      String   @unique @default(uuid())
-  assetId   Int      @map("asset_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  asset     Asset    @relation(fields: [assetId], references: [id])
-  ohc       Ohc[]
+  id         Int      @id @default(autoincrement())
+  ulid       String   @unique @default(uuid())
+  ohcId      Int      @map("ohc_id")
+  assetTagCd String   @map("asset_tag_cd")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  ohc        Ohc      @relation(fields: [ohcId], references: [id])
+  asset      Asset    @relation(fields: [assetTagCd], references: [tagCd])
 
   @@map("ohc_descriptions")
 }

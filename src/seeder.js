@@ -76,6 +76,104 @@ async function main() {
             create: asset
         });
     }
+
+    // Create Cycles
+    const cycles = XLSX.utils.sheet_to_json(workbook.Sheets['Cycles']);
+    for (const cycle of cycles) {
+        await prisma.cycle.upsert({
+            where: { name: cycle.name },
+            update: {},
+            create: {
+                name: cycle.name
+            }
+        });
+    }
+
+    // Create Ohc
+    const ohcs = XLSX.utils.sheet_to_json(workbook.Sheets['Ohc']);
+    for (const ohc of ohcs) {
+        const cycle = await prisma.cycle.findUnique({
+            where: { name: ohc.cycleName }
+        });
+
+        await prisma.ohc.upsert({
+            where: { name: ohc.name },
+            update: {},
+            create: {
+                name: ohc.name,
+                cycleId: cycle.id
+            }
+        });
+    }
+
+    // Create Sp
+    const sps = XLSX.utils.sheet_to_json(workbook.Sheets['Sp']);
+    for (const sp of sps) {
+        const cycle = await prisma.cycle.findUnique({
+            where: { name: sp.cycleName }
+        });
+        const ohc = sp.ohcName ? await prisma.ohc.findUnique({
+            where: { name: sp.ohcName }
+        }) : null;
+
+        await prisma.sp.upsert({
+            where: { name: sp.name },
+            update: {},
+            create: {
+                name: sp.name,
+                cycleId: cycle.id,
+                ohcId: ohc?.id || null,
+                assetTagCd: sp.assetTagCd
+            }
+        });
+    }
+
+    // Create OhcDescriptions
+    const ohcDescriptions = XLSX.utils.sheet_to_json(workbook.Sheets['OhcDescriptions']);
+    for (const desc of ohcDescriptions) {
+        const ohc = await prisma.ohc.findUnique({
+            where: { name: desc.ohcName }
+        });
+
+        await prisma.ohcDescription.create({
+            data: {
+                ohcId: ohc.id,
+                assetTagCd: desc.assetTagCd
+            }
+        });
+    }
+
+    // Create SpDescriptions
+    const spDescriptions = XLSX.utils.sheet_to_json(workbook.Sheets['SpDescriptions']);
+    for (const desc of spDescriptions) {
+        const sp = await prisma.sp.findUnique({
+            where: { name: desc.spName }
+        });
+
+        await prisma.spDescription.create({
+            data: {
+                spId: sp.id,
+                assetTagCd: desc.assetTagCd
+            }
+        });
+    }
+
+    // Create CycleDescriptions
+    const cycleDescriptions = XLSX.utils.sheet_to_json(workbook.Sheets['CycleDescriptions']);
+    for (const desc of cycleDescriptions) {
+        const cycle = await prisma.cycle.findUnique({
+            where: { name: desc.cycleName }
+        });
+
+        await prisma.cycleDescription.create({
+            data: {
+                name: desc.name,
+                actualValue: desc.actualValue,
+                standardValue: desc.standardValue,
+                cycleId: cycle.id
+            }
+        });
+    }
 }
 
 main()
