@@ -1,6 +1,7 @@
-import moment from 'moment';
+import moment from 'moment-timezone';
 import cron from 'node-cron';
 
+moment.tz.setDefault("Asia/Jakarta");
 // Existing constants remain the same
 const LOCATIONS = {
     SP1: 'SP1',
@@ -295,24 +296,32 @@ export class OHCMonitoringService {
         this.shift1Job = cron.schedule('0 7 * * 1-5', () => {
             console.log('Starting Shift 1 monitoring');
             this.startMonitoringJob();
+        }, {
+            timezone: "Asia/Jakarta"
         });
 
         // Schedule Shift 1 end (Monday-Friday at 15:00)
         cron.schedule('0 15 * * 1-5', () => {
             console.log('Ending Shift 1 monitoring');
             this.stopMonitoringJob();
+        }, {
+            timezone: "Asia/Jakarta"
         });
 
         // Schedule Shift 2 start (Monday-Friday at 16:00)
         this.shift2Job = cron.schedule('0 16 * * 1-5', () => {
             console.log('Starting Shift 2 monitoring');
             this.startMonitoringJob();
+        }, {
+            timezone: "Asia/Jakarta"
         });
 
         // Schedule Shift 2 end (Monday-Friday at 24:00/00:00)
         cron.schedule('0 0 * * 2-6', () => {
             console.log('Ending Shift 2 monitoring');
             this.stopMonitoringJob();
+        }, {
+            timezone: "Asia/Jakarta"
         });
 
         console.log('Cron jobs scheduled for monitoring');
@@ -372,8 +381,17 @@ export class OHCMonitoringService {
         const hour = now.hour();
         const isWorkday = now.day() >= 1 && now.day() <= 5;
 
+        console.log(isWorkday)
         if (isWorkday) {
             const { SHIFT_1, SHIFT_2 } = MONITORING_CONFIG.WORKING_HOURS;
+            console.log(hour)
+            console.log('shift 1')
+            console.log(SHIFT_1.start)
+            console.log(SHIFT_1.end)
+            
+            console.log('shift 2')
+            console.log(SHIFT_2.start)
+            console.log(SHIFT_2.end)
             if ((hour >= SHIFT_1.start && hour < SHIFT_1.end) ||
                 (hour >= SHIFT_2.start && hour < SHIFT_2.end)) {
                 this.startMonitoringJob();
@@ -393,4 +411,3 @@ export class OHCMonitoringService {
         console.log('Monitoring system stopped');
     }
 }
-
