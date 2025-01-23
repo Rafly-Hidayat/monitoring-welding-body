@@ -43,13 +43,128 @@ const updateAsset = async (request) => {
     if (!asset) {
         throw new ResponseError(404, "Asset not found")
     }
+    const sensorCycleMapping = {
+        // SP1
+        'X700': {
+            cycleName: 'Cycle SP1',
+            descriptionName: 'STOPPER',
+            condition: { from: "0", to: "1" }
+        },
+        'X702': {
+            cycleName: 'Cycle SP1',
+            descriptionName: 'POSITIONER',
+            condition: { from: "0", to: "1" }
+        },
+
+        // SP7
+        'X740': {
+            cycleName: 'Cycle SP7',
+            descriptionName: 'STOPPER',
+            condition: { from: "0", to: "1" }
+        },
+        'X742': {
+            cycleName: 'Cycle SP7',
+            descriptionName: 'POSITIONER',
+            condition: { from: "0", to: "1" }
+        },
+        'X751': {
+            cycleName: 'Cycle SP7',
+            descriptionName: 'Pusher',
+            condition: { from: "0", to: "1" }
+        },
+
+        // SP8
+        'X7A8': {
+            cycleName: 'Cycle SP8',
+            descriptionName: 'STOPPER',
+            condition: { from: "0", to: "1" }
+        },
+        'X7AA': {
+            cycleName: 'Cycle SP8',
+            descriptionName: 'POSITIONER',
+            condition: { from: "0", to: "1" }
+        },
+
+        // OHC1
+        'X021': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'Lift Up',
+            condition: { from: "0", to: "1" }
+        },
+        'X025': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'Lift Down',
+            condition: { from: "1", to: "0" }
+        },
+        'X022': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'Collision',
+            condition: { from: "0", to: "1" }
+        },
+        'X026': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'Hanger L Close',
+            condition: { from: "1", to: "0" }
+        },
+        'X027': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'Hanger L Open',
+            condition: { from: "0", to: "1" }
+        },
+        'X028': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'Hanger R Close',
+            condition: { from: "1", to: "0" }
+        },
+        'X029': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'Hanger R Open',
+            condition: { from: "0", to: "1" }
+        },
+        'X02A': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'Chain Fault FL',
+            condition: { from: "0", to: "1" }
+        },
+        'X02B': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'Chain Fault FR',
+            condition: { from: "0", to: "1" }
+        },
+        'X02C': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'HangChain Fault RL',
+            condition: { from: "0", to: "1" }
+        },
+        'X02D': {
+            cycleName: 'Cycle OHC1',
+            descriptionName: 'Chain Fault RR',
+            condition: { from: "0", to: "1" }
+        },
+    };
+
+    const oldValue = asset.value;
+    const newValue = data.value;
+    const valueChanges = []
 
     delete data.id
 
-    return prisma.asset.update({
+    const updateAsset = await prisma.asset.update({
         where: { id: asset.id },
         data
     })
+
+    valueChanges.push({
+        groupName: '',
+        tagCd: data.tagCd,
+        oldValue,
+        newValue,
+        changed: oldValue !== newValue
+    });
+
+    await processCycleUpdates(valueChanges, sensorCycleMapping);
+
+    return updateAsset;
 }
 
 const deleteAsset = async (ulid) => {
@@ -133,99 +248,99 @@ const updateAssetInterval = async () => {
 
     const sensorCycleMapping = {
         // SP1
-        'X700': { 
-            cycleName: 'Cycle SP1', 
+        'X700': {
+            cycleName: 'Cycle SP1',
             descriptionName: 'STOPPER',
             condition: { from: "0", to: "1" }
         },
-        'X702': { 
-            cycleName: 'Cycle SP1', 
+        'X702': {
+            cycleName: 'Cycle SP1',
             descriptionName: 'POSITIONER',
             condition: { from: "0", to: "1" }
         },
 
         // SP7
-        'X740': { 
-            cycleName: 'Cycle SP7', 
+        'X740': {
+            cycleName: 'Cycle SP7',
             descriptionName: 'STOPPER',
             condition: { from: "0", to: "1" }
         },
-        'X742': { 
-            cycleName: 'Cycle SP7', 
+        'X742': {
+            cycleName: 'Cycle SP7',
             descriptionName: 'POSITIONER',
             condition: { from: "0", to: "1" }
         },
-        'X751': { 
-            cycleName: 'Cycle SP7', 
+        'X751': {
+            cycleName: 'Cycle SP7',
             descriptionName: 'Pusher',
             condition: { from: "0", to: "1" }
         },
 
         // SP8
-        'X7A8': { 
-            cycleName: 'Cycle SP8', 
+        'X7A8': {
+            cycleName: 'Cycle SP8',
             descriptionName: 'STOPPER',
             condition: { from: "0", to: "1" }
         },
-        'X7AA': { 
-            cycleName: 'Cycle SP8', 
+        'X7AA': {
+            cycleName: 'Cycle SP8',
             descriptionName: 'POSITIONER',
             condition: { from: "0", to: "1" }
         },
 
         // OHC1
-        'X021': { 
-            cycleName: 'Cycle OHC1', 
+        'X021': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'Lift Up',
             condition: { from: "0", to: "1" }
         },
-        'X025': { 
-            cycleName: 'Cycle OHC1', 
+        'X025': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'Lift Down',
             condition: { from: "1", to: "0" }
         },
-        'X022': { 
-            cycleName: 'Cycle OHC1', 
+        'X022': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'Collision',
             condition: { from: "0", to: "1" }
         },
-        'X026': { 
-            cycleName: 'Cycle OHC1', 
+        'X026': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'Hanger L Close',
             condition: { from: "1", to: "0" }
         },
-        'X027': { 
-            cycleName: 'Cycle OHC1', 
+        'X027': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'Hanger L Open',
             condition: { from: "0", to: "1" }
         },
-        'X028': { 
-            cycleName: 'Cycle OHC1', 
+        'X028': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'Hanger R Close',
             condition: { from: "1", to: "0" }
         },
-        'X029': { 
-            cycleName: 'Cycle OHC1', 
+        'X029': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'Hanger R Open',
             condition: { from: "0", to: "1" }
         },
-        'X02A': { 
-            cycleName: 'Cycle OHC1', 
+        'X02A': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'Chain Fault FL',
             condition: { from: "0", to: "1" }
         },
-        'X02B': { 
-            cycleName: 'Cycle OHC1', 
+        'X02B': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'Chain Fault FR',
             condition: { from: "0", to: "1" }
         },
-        'X02C': { 
-            cycleName: 'Cycle OHC1', 
+        'X02C': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'HangChain Fault RL',
             condition: { from: "0", to: "1" }
         },
-        'X02D': { 
-            cycleName: 'Cycle OHC1', 
+        'X02D': {
+            cycleName: 'Cycle OHC1',
             descriptionName: 'Chain Fault RR',
             condition: { from: "0", to: "1" }
         },
@@ -288,7 +403,7 @@ const processCycleUpdates = async (changes, sensorCycleMapping) => {
         if (!change.changed) continue;
 
         // Log semua perubahan
-        console.log(`${change.groupName} - ${change.tagCd}: ${change.oldValue} -> ${change.newValue}`);
+        console.log(`${change.tagCd}: ${change.oldValue} -> ${change.newValue}`);
 
         const mapping = sensorCycleMapping[change.tagCd];
         if (!mapping) continue;

@@ -2,6 +2,7 @@ import express from "express";
 import userController from "../controller/user-controller.js";
 import assetController from "../controller/asset-controller.js";
 import { hasPermission } from "../middleware/auth-middleware.js";
+import ohcController from "../controller/ohc-controller.js";
 
 const router = express.Router();
 
@@ -18,5 +19,8 @@ router.get("/asset/:id", hasPermission("asset.show"), assetController.getAssetBy
 router.post("/asset", hasPermission("asset.create"), assetController.createAsset);
 router.put("/asset", hasPermission("asset.update"), assetController.updateAsset);
 router.delete("/asset/:id", hasPermission("asset.delete"), assetController.deleteAsset);
+
+// OHC service
+router.get("/monitoring", ohcController.getOHCMetrics);
 
 export default router;
