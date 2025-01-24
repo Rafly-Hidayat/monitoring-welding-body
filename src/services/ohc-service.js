@@ -90,11 +90,11 @@ export class OHCMonitoringSystem {
         console.log(ohcs)
 
         // Use asset service to update base values
-        await assetService.updateAssetInterval();
+        // await assetService.updateAssetInterval();
 
         // Update calculated metrics for each OHC
         for (const ohc of ohcs) {
-            const { status, isRunning, isStopped } = this.determineStatus(ohc.sp[0].name);
+            const { status, isRunning, isStopped } = this.determineStatus(ohc.sp[0]?.name ?? '');
 
             const runningTime = Number(ohc.runningTime) + (isRunning ? 1 : 0);
             const stopTime = Number(ohc.stopTime) + (isStopped ? 1 : 0);

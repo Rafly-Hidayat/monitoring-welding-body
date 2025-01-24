@@ -36,8 +36,8 @@ const getAssetById = async (ulid) => {
 const updateAsset = async (request) => {
     const data = validation(updateAssetValidation, request)
 
-    const asset = await prisma.asset.findUnique({
-        where: { ulid: data.id }
+    const asset = await prisma.asset.findFirst({
+        where: { tagCd: data.tagCd }
     })
 
     if (!asset) {
@@ -153,6 +153,37 @@ const updateAsset = async (request) => {
         where: { id: asset.id },
         data
     })
+    const sps = [
+        'EM1001', 'EM1004', 'EM1007', 'EM100B',
+        'EM100F', 'EM1011', 'EM1015', 'EM101C', 'EM1021',
+    ];
+    if (sps.includes(updateAsset.tagCd)) {
+        const ohc = await prisma.ohc.findFirst({
+            where: { name: `OHC${updateAsset.value}` }
+        });
+        if (ohc) {
+            const sp = await prisma.sp.findFirst({
+                where: { assetTagCd: updateAsset.tagCd }
+            });
+            await prisma.sp.update({
+                where: { id: sp.id },
+                data: { ohcId: ohc.id }
+            })
+            await prisma.ohc.update({
+                where: { id: ohc.id },
+                data: {
+                    condition: 'No Body',
+                    cycleTime: getRandomVariation(98, 5),
+                    currentMotorLifter: getRandomVariation(230, 20),
+                    currentMotorTransfer: getRandomVariation(150, 15),
+                    tempMotorLifter: getRandomVariation(60, 5),
+                    tempMotorTransfer: getRandomVariation(40, 5),
+                    okCondition: Math.floor(getRandomVariation(843, 50)),
+                    ngCondition: Math.floor(getRandomVariation(157, 20)),
+                }
+            });
+        }
+    }
 
     valueChanges.push({
         groupName: '',
@@ -208,6 +239,13 @@ const updateAssetInterval = async () => {
         });
 
         if (ohc) {
+            const sp = await prisma.sp.findFirst({
+                where: { assetTagCd: tagCd }
+            });
+            await prisma.sp.update({
+                where: { id: sp.id },
+                data: { ohcId: ohc.id }
+            })
             // Update OHC metrics - only updating the base values, not the calculations
             await prisma.ohc.update({
                 where: { id: ohc.id },

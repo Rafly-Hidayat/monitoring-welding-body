@@ -11,8 +11,6 @@ const createAssetValidation = joi.object({
 })
 
 const updateAssetValidation = joi.object({
-    id: joi.string().required(),
-    assetId: joi.string().required(),
     ceCd: joi.string().required(),
     partCd: joi.string().required(),
     tagCd: joi.string().required(),
