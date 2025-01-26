@@ -262,13 +262,13 @@ export class OHCMonitoringService {
         const hour = now.hour();
         const isWorkday = now.day() >= 1 && now.day() <= 5;
 
-        if (isWorkday) {
-            const { SHIFT_1, SHIFT_2 } = MONITORING_CONFIG.WORKING_HOURS;
-            if ((hour >= SHIFT_1.start && hour < SHIFT_1.end) ||
-                (hour >= SHIFT_2.start && hour < SHIFT_2.end)) {
-                this.startMonitoringJob();
-            }
+        // if (isWorkday) {
+        const { SHIFT_1, SHIFT_2 } = MONITORING_CONFIG.WORKING_HOURS;
+        if ((hour >= SHIFT_1.start && hour < SHIFT_1.end) ||
+            (hour >= SHIFT_2.start && hour < SHIFT_2.end)) {
+            this.startMonitoringJob();
         }
+        // }
     }
 
     stop() {

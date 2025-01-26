@@ -75,7 +75,8 @@ app.use(cors(corsOptions));
 
 // Routes
 app.use("/auth", authRouter);
-app.use("/api", verifyToken, router);
+// app.use("/api", verifyToken, router);
+app.use("/api", router);
 
 // Error handling
 app.use(errorMiddleware);

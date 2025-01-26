@@ -7,18 +7,18 @@ import ohcController from "../controller/ohc-controller.js";
 const router = express.Router();
 
 // User routes
-router.get("/users", hasPermission("user.read"), userController.getAllUsers);
-router.get("/user/:id", hasPermission("user.show"), userController.getUserById);
-router.post("/user", hasPermission("user.create"), userController.createUser);
-router.put("/user", hasPermission("user.update"), userController.updateUser);
-router.delete("/user/:id", hasPermission("user.delete"), userController.deleteUser);
+router.get("/users", userController.getAllUsers);
+router.get("/user/:id", userController.getUserById);
+router.post("/user", userController.createUser);
+router.put("/user", userController.updateUser);
+router.delete("/user/:id", userController.deleteUser);
 
 // Asset routes
-router.get("/assets", hasPermission("asset.read"), assetController.getAllAssets);
-router.get("/asset/:id", hasPermission("asset.show"), assetController.getAssetById);
-router.post("/asset", hasPermission("asset.create"), assetController.createAsset);
-router.put("/asset", hasPermission("asset.update"), assetController.updateAsset);
-router.delete("/asset/:id", hasPermission("asset.delete"), assetController.deleteAsset);
+router.get("/assets", assetController.getAllAssets);
+router.get("/asset/:id", assetController.getAssetById);
+router.post("/asset", assetController.createAsset);
+router.put("/asset", assetController.updateAsset);
+router.delete("/asset/:id", assetController.deleteAsset);
 
 // OHC service
 router.get("/monitoring", ohcController.getOHCMetrics);
