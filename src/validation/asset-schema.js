@@ -19,4 +19,8 @@ const updateAssetValidation = joi.object({
     value: joi.string().required(),
 })
 
-export { createAssetValidation, updateAssetValidation }
+const resetCycleValidation = joi.object({
+    id: joi.number().required(),
+})
+
+export { createAssetValidation, updateAssetValidation, resetCycleValidation }

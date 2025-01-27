@@ -19,6 +19,7 @@ router.get("/asset/:id", assetController.getAssetById);
 router.post("/asset", assetController.createAsset);
 router.put("/asset", assetController.updateAsset);
 router.delete("/asset/:id", assetController.deleteAsset);
+router.post("/cycle/reset", assetController.resetCycle);
 
 // OHC service
 router.get("/monitoring", ohcController.getOHCMetrics);

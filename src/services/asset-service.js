@@ -1,6 +1,6 @@
 import prisma from "../database.js"
 import { ResponseError } from "../err/err-response.js"
-import { createAssetValidation, updateAssetValidation } from "../validation/asset-schema.js"
+import { createAssetValidation, resetCycleValidation, updateAssetValidation } from "../validation/asset-schema.js"
 import { validation } from "../validation/validation.js"
 
 const createAsset = async (request) => {
@@ -161,10 +161,10 @@ const updateAsset = async (request) => {
         const ohc = await prisma.ohc.findFirst({
             where: { name: `OHC${updateAsset.value}` }
         });
+        const sp = await prisma.sp.findFirst({
+            where: { assetTagCd: updateAsset.tagCd }
+        });
         if (ohc) {
-            const sp = await prisma.sp.findFirst({
-                where: { assetTagCd: updateAsset.tagCd }
-            });
             await prisma.sp.update({
                 where: { id: sp.id },
                 data: { ohcId: ohc.id }
@@ -182,6 +182,11 @@ const updateAsset = async (request) => {
                     ngCondition: Math.floor(getRandomVariation(157, 20)),
                 }
             });
+        } else {
+            await prisma.sp.update({
+                where: { id: sp.id },
+                data: { ohcId: null }
+            })
         }
     }
 
@@ -238,10 +243,10 @@ const updateAssetInterval = async () => {
             where: { name: `OHC${value}` }
         });
 
+        const sp = await prisma.sp.findFirst({
+            where: { assetTagCd: tagCd }
+        });
         if (ohc) {
-            const sp = await prisma.sp.findFirst({
-                where: { assetTagCd: tagCd }
-            });
             await prisma.sp.update({
                 where: { id: sp.id },
                 data: { ohcId: ohc.id }
@@ -260,6 +265,11 @@ const updateAssetInterval = async () => {
                     ngCondition: Math.floor(getRandomVariation(157, 20)),
                 }
             });
+        } else {
+            await prisma.sp.update({
+                where: { id: sp.id },
+                data: { ohcId: null }
+            })
         }
 
         return prisma.asset.update({
@@ -499,4 +509,21 @@ const processCycleUpdates = async (changes, sensorCycleMapping) => {
     return updateLog;
 };
 
-export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, updateAssetInterval }
+const resetCycle = async (request) => {
+    const data = validation(resetCycleValidation, request)
+
+    const cycle = await prisma.cycleDescription.findUnique({
+        where: { id: data.id }
+    })
+
+    if (!cycle) {
+        throw new ResponseError(404, "Cycle not found")
+    }
+
+    return prisma.cycleDescription.update({
+        where: { id: data.id },
+        data: { actualValue: 0 }
+    })
+}
+
+export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, updateAssetInterval, resetCycle }
