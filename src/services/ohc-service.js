@@ -90,7 +90,7 @@ export class OHCMonitoringSystem {
         console.log(ohcs)
 
         // Use asset service to update base values
-        await assetService.updateAssetInterval();
+        // await assetService.updateAssetInterval();
 
         // Update calculated metrics for each OHC
         for (const ohc of ohcs) {
