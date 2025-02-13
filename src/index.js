@@ -30,10 +30,6 @@ const ohcService = new OHCMonitoringService();
 ohcService.logStatus = async function () {
     try {
         const metrics = await this.ohcSystem.getOHCMetrics();
-
-        // Debug logging to verify data generation
-        console.log('Generating OHC status update at:', new Date().toISOString());
-
         // Emit the data to all connected clients
         io.emit('ohcStatus', metrics);
 
@@ -52,7 +48,6 @@ io.on('connection', async (socket) => {
     try {
         const metrics = await ohcService.ohcSystem.getOHCMetrics();
         socket.emit('ohcStatus', metrics);
-        console.log('Sent initial data to client:', socket.id);
     } catch (error) {
         console.error('Error sending initial data:', error);
     }

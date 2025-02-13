@@ -87,10 +87,10 @@ export class OHCMonitoringSystem {
         const ohcs = await prisma.ohc.findMany({
             include: { sp: true }
         });
-        console.log(ohcs)
+        // console.log(ohcs)
 
         // Use asset service to update base values
-        // await assetService.updateAssetInterval();
+        await assetService.updateAssetInterval();
 
         // Update calculated metrics for each OHC
         for (const ohc of ohcs) {
@@ -249,9 +249,9 @@ export class OHCMonitoringService {
     }
 
     async logStatus() {
-        console.log('Updating OHCs at:', TimeUtils.formatTime(TimeUtils.getCurrentTimestamp()));
+        // console.log('Updating OHCs at:', TimeUtils.formatTime(TimeUtils.getCurrentTimestamp()));
         const metrics = await this.ohcSystem.getOHCMetrics();
-        console.log(metrics);
+        // console.log(metrics);
     }
 
     async start() {

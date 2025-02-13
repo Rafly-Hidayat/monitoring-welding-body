@@ -133,7 +133,7 @@ const updateAsset = async (request) => {
         },
         'X02C': {
             cycleName: 'Cycle OHC1',
-            descriptionName: 'HangChain Fault RL',
+            descriptionName: 'Chain Fault RL',
             condition: { from: "0", to: "1" }
         },
         'X02D': {
@@ -153,24 +153,20 @@ const updateAsset = async (request) => {
         where: { id: asset.id },
         data
     })
-    const sps = [
-        'EM1001', 'EM1004', 'EM1007', 'EM100B',
-        'EM100F', 'EM1011', 'EM1015', 'EM101C', 'EM1021',
-    ];
-    if (sps.includes(updateAsset.tagCd)) {
+
+    const sp = await prisma.sp.findFirst({
+        where: { assetTagCd: updateAsset.tagCd }
+    });
+
+    if (sp) {
         const ohc = await prisma.ohc.findFirst({
             where: { name: `OHC${updateAsset.value}` }
         });
-        const sp = await prisma.sp.findFirst({
-            where: { assetTagCd: updateAsset.tagCd }
-        });
-        if (ohc) {
-            await prisma.sp.update({
-                where: { id: sp.id },
-                data: { ohcId: ohc.id }
-            })
+
+        const ohcId = ohc?.id || null;
+        if (ohcId) {
             await prisma.ohc.update({
-                where: { id: ohc.id },
+                where: { id: ohcId },
                 data: {
                     condition: 'No Body',
                     cycleTime: getRandomVariation(98, 5),
@@ -182,12 +178,12 @@ const updateAsset = async (request) => {
                     ngCondition: Math.floor(getRandomVariation(157, 20)),
                 }
             });
-        } else {
-            await prisma.sp.update({
-                where: { id: sp.id },
-                data: { ohcId: null }
-            })
         }
+
+        await prisma.sp.update({
+            where: { id: sp.id },
+            data: { ohcId }
+        })
     }
 
     valueChanges.push({
@@ -228,8 +224,9 @@ const getRandomVariation = (base, range) => {
 const updateAssetInterval = async () => {
     // SP Location updates
     const sps = [
-        'EM1001', 'EM1004', 'EM1007', 'EM100B',
+        'EM1001', 'EM1004', 'EM1007', 'EM100B', 'EM101D',
         'EM100F', 'EM1011', 'EM1015', 'EM101C', 'EM1021',
+        'EM101A'
     ];
 
     let oldValue = 0;
@@ -238,6 +235,7 @@ const updateAssetInterval = async () => {
         let value = getRandomIntInclusive(0, 6);
         if (value >= 1 && value <= 6) oldValue++
         value = oldValue === 6 ? "0" : value.toString()
+        // value = value.toString();
         // Find corresponding OHC
         const ohc = await prisma.ohc.findFirst({
             where: { name: `OHC${value}` }
@@ -246,14 +244,12 @@ const updateAssetInterval = async () => {
         const sp = await prisma.sp.findFirst({
             where: { assetTagCd: tagCd }
         });
-        if (ohc) {
-            await prisma.sp.update({
-                where: { id: sp.id },
-                data: { ohcId: ohc.id }
-            })
+
+        const ohcId = ohc?.id || null;
+        if (ohcId) {
             // Update OHC metrics - only updating the base values, not the calculations
             await prisma.ohc.update({
-                where: { id: ohc.id },
+                where: { id: ohcId },
                 data: {
                     condition: 'No Body',
                     cycleTime: getRandomVariation(98, 5),
@@ -265,17 +261,19 @@ const updateAssetInterval = async () => {
                     ngCondition: Math.floor(getRandomVariation(157, 20)),
                 }
             });
-        } else {
-            await prisma.sp.update({
-                where: { id: sp.id },
-                data: { ohcId: null }
-            })
         }
+
+        await prisma.sp.update({
+            where: { id: sp.id },
+            data: { ohcId }
+        })
 
         return prisma.asset.update({
             where: { tagCd: tagCd },
             data: { value }
         });
+
+        oldValue = 0;
     });
 
     // Execute SP updates
@@ -384,7 +382,7 @@ const updateAssetInterval = async () => {
         },
         'X02C': {
             cycleName: 'Cycle OHC1',
-            descriptionName: 'HangChain Fault RL',
+            descriptionName: 'Chain Fault RL',
             condition: { from: "0", to: "1" }
         },
         'X02D': {
@@ -451,7 +449,7 @@ const processCycleUpdates = async (changes, sensorCycleMapping) => {
         if (!change.changed) continue;
 
         // Log semua perubahan
-        console.log(`${change.tagCd}: ${change.oldValue} -> ${change.newValue}`);
+        // console.log(`${change.tagCd}: ${change.oldValue} -> ${change.newValue}`);
 
         const mapping = sensorCycleMapping[change.tagCd];
         if (!mapping) continue;
@@ -505,7 +503,7 @@ const processCycleUpdates = async (changes, sensorCycleMapping) => {
         }
     }
 
-    console.log(updateLog)
+    // console.log(updateLog)
     return updateLog;
 };
 
