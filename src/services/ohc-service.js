@@ -128,7 +128,7 @@ export class OHCMonitoringSystem {
         switch (location) {
             case 'SP8':
                 return { status: 'Ready', isRunning: true, isStopped: false };
-            case 'SP7':
+            case 'SP0':
                 return { status: 'Repair', isRunning: true, isStopped: false };
             case 'SP1':
                 return { status: 'NG', isRunning: false, isStopped: true };
