@@ -345,15 +345,7 @@ const updateAssetInterval = async () => {
 };
 
 async function updateOhcAssignments(sps) {
-    let previousValue = 0;
-    let assignmentCount = 0;
-    const maxAssignmentsPerOhc = 6;
-    // Track used values
     const usedValues = new Set();
-
-    console.log('Starting OHC assignments update...');
-
-    // Pre-fetch all OHCs to avoid multiple database queries
     const ohcs = await prisma.ohc.findMany({
         where: {
             name: {
@@ -386,7 +378,6 @@ async function updateOhcAssignments(sps) {
 
             const ohcName = `OHC${newValue}`;
             const ohc = ohcMap.get(ohcName);
-
             if (!ohc) {
                 console.warn(`OHC not found: ${ohcName}`);
             }
@@ -430,18 +421,6 @@ async function updateOhcAssignments(sps) {
                 where: { tagCd },
                 data: { value: newValue.toString() }
             });
-
-            // Update counters
-            // assignmentCount++;
-            // if (assignmentCount >= maxAssignmentsPerOhc) {
-            //     assignmentCount = 0;
-            //     // Reset used values when max assignments reached
-            //     usedValues.clear();
-            // }
-            // previousValue = newValue;
-
-            console.log(`Successfully updated assignments for asset ${tagCd} to OHC${newValue}`);
-
         } catch (error) {
             console.error(`Error updating assignments for asset ${tagCd}:`, error);
         }
@@ -502,9 +481,6 @@ const processCycleUpdates = async (changes, sensorCycleMapping) => {
     for (const change of changes) {
         if (!change.changed) continue;
 
-        // Log semua perubahan
-        // console.log(`${change.tagCd}: ${change.oldValue} -> ${change.newValue}`);
-
         const mapping = sensorCycleMapping[change.tagCd];
         if (!mapping) continue;
 
@@ -557,7 +533,6 @@ const processCycleUpdates = async (changes, sensorCycleMapping) => {
         }
     }
 
-    // console.log(updateLog)
     return updateLog;
 };
 

@@ -9,7 +9,7 @@ const MONITORING_CONFIG = {
     UPDATE_INTERVAL: 1000,
     WORKING_HOURS: {
         SHIFT_1: { start: 7, end: 15 },
-        SHIFT_2: { start: 15, end: 24 }
+        SHIFT_2: { start: 16, end: 24 }
     },
     THRESHOLDS: {
         MOTOR_CURRENT: {
@@ -89,7 +89,7 @@ export class OHCMonitoringSystem {
         });
 
         // Use asset service to update base values
-        await assetService.updateAssetInterval();
+        // await assetService.updateAssetInterval();
 
         // Update calculated metrics for each OHC
         for (const ohc of ohcs) {
@@ -248,9 +248,7 @@ export class OHCMonitoringService {
     }
 
     async logStatus() {
-        // console.log('Updating OHCs at:', TimeUtils.formatTime(TimeUtils.getCurrentTimestamp()));
-        const metrics = await this.ohcSystem.getOHCMetrics();
-        // console.log(metrics);
+        await this.ohcSystem.getOHCMetrics();
     }
 
     async start() {
