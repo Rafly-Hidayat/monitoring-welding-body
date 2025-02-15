@@ -101,7 +101,8 @@ async function main() {
             update: {},
             create: {
                 name: ohc.name,
-                cycleId: cycle.id
+                cycleId: cycle.id,
+                assetTagCd: ohc.assetTagCd
             }
         });
     }

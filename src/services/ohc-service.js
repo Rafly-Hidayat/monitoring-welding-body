@@ -9,7 +9,7 @@ const MONITORING_CONFIG = {
     UPDATE_INTERVAL: 1000,
     WORKING_HOURS: {
         SHIFT_1: { start: 7, end: 15 },
-        SHIFT_2: { start: 16, end: 24 }
+        SHIFT_2: { start: 15, end: 24 }
     },
     THRESHOLDS: {
         MOTOR_CURRENT: {
@@ -85,16 +85,15 @@ export class OHCMonitoringSystem {
     async updateOHCs() {
         // Get all OHCs before update
         const ohcs = await prisma.ohc.findMany({
-            include: { sp: true }
+            include: { sp: true, asset: true }
         });
-        // console.log(ohcs)
 
         // Use asset service to update base values
-        // await assetService.updateAssetInterval();
+        await assetService.updateAssetInterval();
 
         // Update calculated metrics for each OHC
         for (const ohc of ohcs) {
-            const { status, isRunning, isStopped } = this.determineStatus(ohc.sp[0]?.name ?? '');
+            const { status, isRunning, isStopped } = this.determineStatus(ohc);
 
             const runningTime = Number(ohc.runningTime) + (isRunning ? 1 : 0);
             const stopTime = Number(ohc.stopTime) + (isStopped ? 1 : 0);
@@ -124,14 +123,13 @@ export class OHCMonitoringSystem {
         }
     }
 
-    determineStatus(location) {
-        switch (location) {
+    determineStatus(ohc) {
+        if (ohc.asset.value != "0") return { status: 'NG', isRunning: false, isStopped: true };
+        switch (ohc.sp[0]?.name ?? '') {
             case 'SP8':
                 return { status: 'Ready', isRunning: true, isStopped: false };
             case 'SP0':
                 return { status: 'Repair', isRunning: true, isStopped: false };
-            case 'SP1':
-                return { status: 'NG', isRunning: false, isStopped: true };
             default:
                 return { status: '', isRunning: false, isStopped: false };
         }
@@ -141,6 +139,7 @@ export class OHCMonitoringSystem {
         const ohcData = await prisma.ohc.findMany({
             orderBy: { name: 'asc' },
             include: {
+                asset: true,
                 sp: true,
                 cycle: { include: { cycleDescription: true } },
                 ohcDescriptions: { include: { asset: true } },
@@ -256,6 +255,7 @@ export class OHCMonitoringService {
 
     async start() {
         this.setupCronJobs();
+        console.log('start')
 
         // If we're starting during working hours, begin monitoring immediately
         const now = moment();

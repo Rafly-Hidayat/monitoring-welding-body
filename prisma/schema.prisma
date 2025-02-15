@@ -61,12 +61,15 @@ model Asset {
   value          String
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
+
   spDescription  SpDescription[]
   ohcDescription OhcDescription[]
   Sp             Sp[]
+  ohc            Ohc[]
 
   @@map("assets")
 }
+
 
 model Cycle {
   id               Int                @id @default(autoincrement())
@@ -130,14 +133,18 @@ model Ohc {
   ngCondition          BigInt           @default(0)
   abnormalityCount     Int              @default(0)
   cycleId              Int              @map("cycle_id")
+  assetTagCd           String           @map("asset_tag_cd")
   createdAt            DateTime         @default(now()) @map("created_at")
   updatedAt            DateTime         @updatedAt @map("updated_at")
+
   cycle                Cycle            @relation(fields: [cycleId], references: [id])
+  asset                Asset            @relation(fields: [assetTagCd], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
   sp                   Sp[]
   ohcDescriptions      OhcDescription[]
 
   @@map("ohc")
 }
+
 
 model OhcDescription {
   id         Int      @id @default(autoincrement())

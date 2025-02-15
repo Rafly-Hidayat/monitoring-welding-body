@@ -47,6 +47,7 @@ io.on('connection', async (socket) => {
     // Send initial data when client connects
     try {
         const metrics = await ohcService.ohcSystem.getOHCMetrics();
+        console.log('init value')
         socket.emit('ohcStatus', metrics);
     } catch (error) {
         console.error('Error sending initial data:', error);

@@ -224,60 +224,10 @@ const getRandomVariation = (base, range) => {
 const updateAssetInterval = async () => {
     // SP Location updates
     const sps = [
-        'EM1001', 'EM1004', 'EM1007', 'EM100B', 'EM101D',
-        'EM100F', 'EM1011', 'EM1015', 'EM101C', 'EM1021',
-        'EM101A'
+        'EM1001', 'EM1015', 'EM1021', 'EM1004', 'EM1007', 'EM100B', 'EM101E',
+        'EM100F', 'EM1011', 'EM101C', 'EM101A'
     ];
-
-    let oldValue = 0;
-    // Update each SP asset with a random OHC assignment
-    const updatePromises = sps.map(async (tagCd) => {
-        let value = getRandomIntInclusive(0, 6);
-        if (value >= 1 && value <= 6) oldValue++
-        value = oldValue === 6 ? "0" : value.toString()
-        // value = value.toString();
-        // Find corresponding OHC
-        const ohc = await prisma.ohc.findFirst({
-            where: { name: `OHC${value}` }
-        });
-
-        const sp = await prisma.sp.findFirst({
-            where: { assetTagCd: tagCd }
-        });
-
-        const ohcId = ohc?.id || null;
-        if (ohcId) {
-            // Update OHC metrics - only updating the base values, not the calculations
-            await prisma.ohc.update({
-                where: { id: ohcId },
-                data: {
-                    condition: 'No Body',
-                    cycleTime: getRandomVariation(98, 5),
-                    currentMotorLifter: getRandomVariation(230, 20),
-                    currentMotorTransfer: getRandomVariation(150, 15),
-                    tempMotorLifter: getRandomVariation(60, 5),
-                    tempMotorTransfer: getRandomVariation(40, 5),
-                    okCondition: Math.floor(getRandomVariation(843, 50)),
-                    ngCondition: Math.floor(getRandomVariation(157, 20)),
-                }
-            });
-        }
-
-        await prisma.sp.update({
-            where: { id: sp.id },
-            data: { ohcId }
-        })
-
-        return prisma.asset.update({
-            where: { tagCd: tagCd },
-            data: { value }
-        });
-
-        oldValue = 0;
-    });
-
-    // Execute SP updates
-    await Promise.all(updatePromises);
+    await updateOhcAssignments(sps);
 
     // Sensor updates for different locations
     const allSensors = {
@@ -393,6 +343,110 @@ const updateAssetInterval = async () => {
     };
     await processCycleUpdates(changes, sensorCycleMapping);
 };
+
+async function updateOhcAssignments(sps) {
+    let previousValue = 0;
+    let assignmentCount = 0;
+    const maxAssignmentsPerOhc = 6;
+    // Track used values
+    const usedValues = new Set();
+
+    console.log('Starting OHC assignments update...');
+
+    // Pre-fetch all OHCs to avoid multiple database queries
+    const ohcs = await prisma.ohc.findMany({
+        where: {
+            name: {
+                in: Array.from({ length: 6 }, (_, i) => `OHC${i + 1}`)
+            }
+        }
+    });
+
+    const ohcMap = new Map(ohcs.map(ohc => [ohc.name, ohc]));
+
+    for (const tagCd of sps) {
+        try {
+            // Generate a new unique value
+            let newValue = 0;
+            const availableValues = new Set([1, 2, 3, 4, 5, 6]);
+
+            // Remove used values from available options
+            for (const usedValue of usedValues) {
+                availableValues.delete(usedValue);
+            }
+
+            // If there are available values, randomly select one
+            if (availableValues.size > 0) {
+                const availableArray = Array.from(availableValues);
+                const randomIndex = Math.floor(Math.random() * availableArray.length);
+                newValue = availableArray[randomIndex];
+                usedValues.add(newValue);
+            }
+            // Otherwise, newValue remains 0
+
+            const ohcName = `OHC${newValue}`;
+            const ohc = ohcMap.get(ohcName);
+
+            if (!ohc) {
+                console.warn(`OHC not found: ${ohcName}`);
+            }
+            const ohcId = ohc?.id || null;
+
+            // Find the SP record
+            const sp = await prisma.sp.findFirst({
+                where: { assetTagCd: tagCd }
+            });
+
+            if (!sp) {
+                console.warn(`SP not found for asset tag: ${tagCd}`);
+                continue;
+            }
+
+            // Update OHC metrics with random variations
+            if (ohcId) {
+                await prisma.ohc.update({
+                    where: { id: ohcId },
+                    data: {
+                        condition: 'No Body',
+                        cycleTime: getRandomVariation(98, 5),
+                        currentMotorLifter: getRandomVariation(230, 20),
+                        currentMotorTransfer: getRandomVariation(150, 15),
+                        tempMotorLifter: getRandomVariation(60, 5),
+                        tempMotorTransfer: getRandomVariation(40, 5),
+                        okCondition: Math.floor(getRandomVariation(843, 50)),
+                        ngCondition: Math.floor(getRandomVariation(157, 20))
+                    }
+                });
+            }
+
+            // Update SP with new OHC assignment
+            await prisma.sp.update({
+                where: { id: sp.id },
+                data: { ohcId }
+            });
+
+            // Update asset value
+            await prisma.asset.update({
+                where: { tagCd },
+                data: { value: newValue.toString() }
+            });
+
+            // Update counters
+            // assignmentCount++;
+            // if (assignmentCount >= maxAssignmentsPerOhc) {
+            //     assignmentCount = 0;
+            //     // Reset used values when max assignments reached
+            //     usedValues.clear();
+            // }
+            // previousValue = newValue;
+
+            console.log(`Successfully updated assignments for asset ${tagCd} to OHC${newValue}`);
+
+        } catch (error) {
+            console.error(`Error updating assignments for asset ${tagCd}:`, error);
+        }
+    }
+}
 
 const processSensorUpdates = async (allSensors) => {
     const valueChanges = [];
