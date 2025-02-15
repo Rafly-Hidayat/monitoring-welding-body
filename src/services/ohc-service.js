@@ -91,6 +91,9 @@ export class OHCMonitoringSystem {
         // Use asset service to update base values
         // await assetService.updateAssetInterval();
 
+        const allSaveOhc = ohcs.filter(ohc => ohc.asset.value === '0');
+        const defaultPerformance = ohcs.length > 0 ? ((allSaveOhc.length / ohcs.length) * 100).toFixed(1) : '0.0';
+
         // Update calculated metrics for each OHC
         for (const ohc of ohcs) {
             const { status, isRunning, isStopped } = this.determineStatus(ohc);
@@ -116,7 +119,8 @@ export class OHCMonitoringSystem {
                     runningTime: runningTime,
                     stopTime: stopTime,
                     efficiency: parseFloat(efficiency),
-                    performance: parseFloat(performance),
+                    // performance: parseFloat(performance),
+                    performance: parseFloat(defaultPerformance),
                     abnormalityCount
                 }
             });
@@ -170,7 +174,8 @@ export class OHCMonitoringSystem {
             runningTime: TimeUtils.formatDuration(ohcs.reduce((sum, ohc) => sum + Number(ohc.runningTime), 0) / ohcs.length),
             stopTime: TimeUtils.formatDuration(ohcs.reduce((sum, ohc) => sum + Number(ohc.stopTime), 0) / ohcs.length),
             efficiency: (ohcs.reduce((sum, ohc) => sum + Number(ohc.efficiency), 0) / ohcs.length).toFixed(1),
-            performance: (ohcs.reduce((sum, ohc) => sum + Number(ohc.performance), 0) / ohcs.length).toFixed(1),
+            // performance: (ohcs.reduce((sum, ohc) => sum + Number(ohc.performance), 0) / ohcs.length).toFixed(1),
+            performance: ohcs[1].performance,
         };
 
         ohcs = ohcs.map(element => {
