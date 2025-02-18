@@ -50,26 +50,29 @@ model Permission {
 }
 
 model Asset {
-  id             Int              @id @default(autoincrement())
-  ulid           String           @unique @default(uuid())
-  assetId        String           @map("asset_id")
-  ceCd           String           @map("ce_cd")
-  partCd         String           @map("part_cd")
-  tagCd          String           @unique @map("tag_cd")
-  type           String
-  comment        String?
-  value          String
-  createdAt      DateTime         @default(now()) @map("created_at")
-  updatedAt      DateTime         @updatedAt @map("updated_at")
+  id        Int      @id @default(autoincrement())
+  ulid      String   @unique @default(uuid())
+  assetId   String   @map("asset_id")
+  ceCd      String   @map("ce_cd")
+  partCd    String   @map("part_cd")
+  tagCd     String   @unique @map("tag_cd")
+  type      String
+  comment   String?
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  spDescription  SpDescription[]
-  ohcDescription OhcDescription[]
-  Sp             Sp[]
-  ohc            Ohc[]
+  spDescription            SpDescription[]
+  ohcDescription           OhcDescription[]
+  Sp                       Sp[]
+  Ohc                      Ohc[]
+  currentMotorLifterOhcs   Ohc[]            @relation("CurrentMotorLifterRelation")
+  currentMotorTransferOhcs Ohc[]            @relation("CurrentMotorTransferRelation")
+  tempMotorLifterOhcs      Ohc[]            @relation("TempMotorLifterRelation")
+  tempMotorTransferOhcs    Ohc[]            @relation("TempMotorTransferRelation")
 
   @@map("assets")
 }
-
 
 model Cycle {
   id               Int                @id @default(autoincrement())
@@ -115,36 +118,40 @@ model SpDescription {
 }
 
 model Ohc {
-  id                   Int              @id @default(autoincrement())
-  ulid                 String           @unique @default(uuid())
-  name                 String           @unique
-  condition            String           @default("")
-  status               String           @default("")
-  runningTime          BigInt           @default(0)
-  stopTime             BigInt           @default(0)
-  cycleTime            BigInt           @default(0)
-  efficiency           Float            @default(0.0)
-  performance          Float            @default(0.0)
-  currentMotorLifter   BigInt           @default(0)
-  currentMotorTransfer BigInt           @default(0)
-  tempMotorLifter      BigInt           @default(0)
-  tempMotorTransfer    BigInt           @default(0)
-  okCondition          BigInt           @default(0)
-  ngCondition          BigInt           @default(0)
-  abnormalityCount     Int              @default(0)
-  cycleId              Int              @map("cycle_id")
-  assetTagCd           String           @map("asset_tag_cd")
-  createdAt            DateTime         @default(now()) @map("created_at")
-  updatedAt            DateTime         @updatedAt @map("updated_at")
+  id                   Int      @id @default(autoincrement())
+  ulid                 String   @unique @default(uuid())
+  name                 String   @unique
+  condition            String   @default("")
+  status               String   @default("")
+  runningTime          BigInt   @default(0)
+  stopTime             BigInt   @default(0)
+  cycleTime            BigInt   @default(0)
+  taktTime             BigInt   @default(0)
+  efficiency           Float    @default(0.0)
+  performance          Float    @default(0.0)
+  currentMotorLifter   String?
+  currentMotorTransfer String?
+  tempMotorLifter      String?
+  tempMotorTransfer    String?
+  okCondition          BigInt   @default(0)
+  ngCondition          BigInt   @default(0)
+  abnormalityCount     Int      @default(0)
+  cycleId              Int      @map("cycle_id")
+  assetTagCd           String   @map("asset_tag_cd")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
-  cycle                Cycle            @relation(fields: [cycleId], references: [id])
-  asset                Asset            @relation(fields: [assetTagCd], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
-  sp                   Sp[]
-  ohcDescriptions      OhcDescription[]
+  cycle                     Cycle            @relation(fields: [cycleId], references: [id])
+  asset                     Asset            @relation(fields: [assetTagCd], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  currentMotorLifterAsset   Asset?           @relation("CurrentMotorLifterRelation", fields: [currentMotorLifter], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  currentMotorTransferAsset Asset?           @relation("CurrentMotorTransferRelation", fields: [currentMotorTransfer], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  tempMotorLifterAsset      Asset?           @relation("TempMotorLifterRelation", fields: [tempMotorLifter], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  tempMotorTransferAsset    Asset?           @relation("TempMotorTransferRelation", fields: [tempMotorTransfer], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  sp                        Sp[]
+  ohcDescriptions           OhcDescription[]
 
   @@map("ohc")
 }
-
 
 model OhcDescription {
   id         Int      @id @default(autoincrement())

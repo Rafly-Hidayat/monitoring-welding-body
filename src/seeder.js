@@ -102,7 +102,11 @@ async function main() {
             create: {
                 name: ohc.name,
                 cycleId: cycle.id,
-                assetTagCd: ohc.assetTagCd
+                assetTagCd: ohc.assetTagCd,
+                currentMotorLifter: ohc.currentMotorLifter,
+                currentMotorTransfer: ohc.currentMotorTransfer,
+                tempMotorLifter: ohc.tempMotorLifter,
+                tempMotorTransfer: ohc.tempMotorTransfer,
             }
         });
     }

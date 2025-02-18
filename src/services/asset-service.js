@@ -170,10 +170,10 @@ const updateAsset = async (request) => {
                 data: {
                     condition: 'No Body',
                     cycleTime: getRandomVariation(98, 5),
-                    currentMotorLifter: getRandomVariation(230, 20),
-                    currentMotorTransfer: getRandomVariation(150, 15),
-                    tempMotorLifter: getRandomVariation(60, 5),
-                    tempMotorTransfer: getRandomVariation(40, 5),
+                    // currentMotorLifter: getRandomVariation(230, 20),
+                    // currentMotorTransfer: getRandomVariation(150, 15),
+                    // tempMotorLifter: getRandomVariation(60, 5),
+                    // tempMotorTransfer: getRandomVariation(40, 5),
                     okCondition: Math.floor(getRandomVariation(843, 50)),
                     ngCondition: Math.floor(getRandomVariation(157, 20)),
                 }
@@ -212,11 +212,13 @@ const deleteAsset = async (ulid) => {
         where: { id: asset.id }
     })
 }
+
 const getRandomIntInclusive = (min, max) => {
     const minCeiled = Math.ceil(min);
     const maxFloored = Math.floor(max);
     return Math.floor(Math.random() * (maxFloored - minCeiled + 1) + minCeiled);
 };
+
 const getRandomVariation = (base, range) => {
     return Math.floor(base + (Math.random() * range * 2 - range));
 };
