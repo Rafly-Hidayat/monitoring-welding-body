@@ -147,10 +147,10 @@ export class OHCMonitoringSystem {
                 sp: true,
                 cycle: { include: { cycleDescription: true } },
                 ohcDescriptions: { include: { asset: true } },
-                currentMotorLifterAsset: { select: { value: true }, transform: (asset) => asset?.value || null },
-                currentMotorTransferAsset: { select: { value: true }, transform: (asset) => asset?.value || null },
-                tempMotorLifterAsset: { select: { value: true }, transform: (asset) => asset?.value || null },
-                tempMotorTransferAsset: { select: { value: true }, transform: (asset) => asset?.value || null },
+                currentMotorLifterAsset: { select: { value: true } },
+                currentMotorTransferAsset: { select: { value: true } },
+                tempMotorLifterAsset: { select: { value: true } },
+                tempMotorTransferAsset: { select: { value: true } },
             }
         });
 
