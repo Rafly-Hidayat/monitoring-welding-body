@@ -8,7 +8,7 @@ moment.tz.setDefault("Asia/Jakarta");
 const MONITORING_CONFIG = {
     UPDATE_INTERVAL: 1000,
     WORKING_HOURS: {
-        SHIFT_1: { start: 5, end: 15 },
+        SHIFT_1: { start: 7, end: 15 },
         SHIFT_2: { start: 16, end: 24 }
     },
     THRESHOLDS: {
