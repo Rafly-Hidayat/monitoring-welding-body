@@ -8,7 +8,7 @@ moment.tz.setDefault("Asia/Jakarta");
 const MONITORING_CONFIG = {
     UPDATE_INTERVAL: 1000,
     WORKING_HOURS: {
-        SHIFT_1: { start: 7, end: 15 },
+        SHIFT_1: { start: 5, end: 15 },
         SHIFT_2: { start: 16, end: 24 }
     },
     THRESHOLDS: {
@@ -169,7 +169,6 @@ export class OHCMonitoringSystem {
             }
         });
 
-        // Contoh fungsi helper untuk mengkonversi BigInt
         const convertBigIntToNumber = (data) => {
             return JSON.parse(JSON.stringify(data, (key, value) =>
                 typeof value === 'bigint'
@@ -178,37 +177,38 @@ export class OHCMonitoringSystem {
             ));
         };
 
-        // Penggunaan
         let ohcs = convertBigIntToNumber(ohcData);
         const summary = {
             runningTime: TimeUtils.formatDuration(ohcs.reduce((sum, ohc) => sum + Number(ohc.runningTime), 0) / ohcs.length),
             stopTime: TimeUtils.formatDuration(ohcs.reduce((sum, ohc) => sum + Number(ohc.stopTime), 0) / ohcs.length),
             efficiency: (ohcs.reduce((sum, ohc) => sum + Number(ohc.efficiency), 0) / ohcs.length).toFixed(1),
-            // performance: (ohcs.reduce((sum, ohc) => sum + Number(ohc.performance), 0) / ohcs.length).toFixed(1),
             performance: ohcs[1].performance,
         };
 
-        const generateTimePoints = () => {
-            const timePoints = [];
-            for (let hour = 0; hour < 24; hour++) {
-                for (let minute of [0, 30]) {
-                    const time = moment().hour(hour).minute(minute).format('HH:mm');
-                    timePoints.push(time);
-                }
+        function getIndicator(currentValue, history, threshold) {
+            if (currentValue < threshold.MAX) {
+                return "hijau";
             }
-            return timePoints;
-        };
 
-        const timePoints = generateTimePoints();
-        function isAbnormal(value, min, max) {
-            return value < min || value > max;
+            // Check if current value equals or exceeds MAX
+            if (currentValue >= threshold.MAX) {
+                const lastThreeValues = history.slice(-3).map(h => h.value);
+
+                // If have 3 consecutive values above MAX
+                if (lastThreeValues.length === 3 &&
+                    lastThreeValues.every(val => val > threshold.MAX)) {
+                    return "merah";
+                }
+                return "kuning";
+            }
+
+            return "hijau";
         }
+
         const { MOTOR_CURRENT, MOTOR_TEMP } = MONITORING_CONFIG.THRESHOLDS;
 
-        // Ambil data history 24 jam terakhir
         const startTime = moment().subtract(24, 'hours').toDate();
 
-        // Ambil history untuk semua OHC
         const histories = await prisma.oHCMonitoringHistory.findMany({
             where: {
                 timestamp: {
@@ -220,7 +220,6 @@ export class OHCMonitoringSystem {
             }
         });
 
-        // Kelompokkan history berdasarkan OHC
         const historyByOhc = histories.reduce((acc, history) => {
             if (!acc[history.ohcId]) {
                 acc[history.ohcId] = [];
@@ -232,40 +231,69 @@ export class OHCMonitoringSystem {
         ohcs = ohcs.map(element => {
             const ohcHistory = historyByOhc[element.id] || [];
 
-            const monitoringData = {
+            const monitoringGraphic = {
                 currentLifter: {
-                    abnormal: isAbnormal(Number(element.currentMotorLifterAsset.value), MOTOR_CURRENT.MIN, MOTOR_CURRENT.MAX),
+                    indicator: getIndicator(
+                        Number(element.currentMotorLifterAsset.value),
+                        ohcHistory.map(h => ({
+                            time: moment(h.timestamp).format('HH:mm'),
+                            value: h.currentMotorLifter
+                        })),
+                        MOTOR_CURRENT
+                    ),
                     data: ohcHistory.map(h => ({
                         time: moment(h.timestamp).format('HH:mm'),
                         value: h.currentMotorLifter
                     }))
                 },
                 currentTransfer: {
-                    abnormal: isAbnormal(Number(element.currentMotorTransferAsset.value), MOTOR_CURRENT.MIN, MOTOR_CURRENT.MAX),
+                    indicator: getIndicator(
+                        Number(element.currentMotorTransferAsset.value),
+                        ohcHistory.map(h => ({
+                            time: moment(h.timestamp).format('HH:mm'),
+                            value: h.currentMotorTransfer
+                        })),
+                        MOTOR_CURRENT
+                    ),
                     data: ohcHistory.map(h => ({
                         time: moment(h.timestamp).format('HH:mm'),
                         value: h.currentMotorTransfer
                     }))
                 },
                 tempLifter: {
-                    abnormal: isAbnormal(Number(element.tempMotorLifterAsset.value), MOTOR_TEMP.MIN, MOTOR_TEMP.MAX),
+                    indicator: getIndicator(
+                        Number(element.tempMotorLifterAsset.value),
+                        ohcHistory.map(h => ({
+                            time: moment(h.timestamp).format('HH:mm'),
+                            value: h.tempMotorLifter
+                        })),
+                        MOTOR_TEMP
+                    ),
                     data: ohcHistory.map(h => ({
                         time: moment(h.timestamp).format('HH:mm'),
                         value: h.tempMotorLifter
                     }))
                 },
                 tempTransfer: {
-                    abnormal: isAbnormal(Number(element.tempMotorTransferAsset.value), MOTOR_TEMP.MIN, MOTOR_TEMP.MAX),
+                    indicator: getIndicator(
+                        Number(element.tempMotorTransferAsset.value),
+                        ohcHistory.map(h => ({
+                            time: moment(h.timestamp).format('HH:mm'),
+                            value: h.tempMotorTransfer
+                        })),
+                        MOTOR_TEMP
+                    ),
                     data: ohcHistory.map(h => ({
                         time: moment(h.timestamp).format('HH:mm'),
                         value: h.tempMotorTransfer
                     }))
-                }
+                },
+                threshold: { MOTOR_CURRENT, MOTOR_TEMP }
             };
 
             return {
                 ...element,
-                monitoringData,
+                monitoringGraphic,
                 runningTime: TimeUtils.formatDuration(element.runningTime),
                 stopTime: TimeUtils.formatDuration(element.stopTime),
                 cycleTime: TimeUtils.formatDuration(element.cycleTime)
