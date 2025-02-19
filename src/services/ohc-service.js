@@ -407,7 +407,7 @@ export class OHCMonitoringService {
         this.setupCronJobs();
         console.log('start')
 
-        // if (TimeUtils.isWorkingHours()) {
+        // if (TimeUtils.isWorkingDay()) {
         if (TimeUtils.isWorkingHours()) {
             this.startMonitoringJob();
         }
