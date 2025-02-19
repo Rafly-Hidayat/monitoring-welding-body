@@ -141,16 +141,30 @@ model Ohc {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
-  cycle                     Cycle            @relation(fields: [cycleId], references: [id])
-  asset                     Asset            @relation(fields: [assetTagCd], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
-  currentMotorLifterAsset   Asset?           @relation("CurrentMotorLifterRelation", fields: [currentMotorLifter], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
-  currentMotorTransferAsset Asset?           @relation("CurrentMotorTransferRelation", fields: [currentMotorTransfer], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
-  tempMotorLifterAsset      Asset?           @relation("TempMotorLifterRelation", fields: [tempMotorLifter], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
-  tempMotorTransferAsset    Asset?           @relation("TempMotorTransferRelation", fields: [tempMotorTransfer], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  cycle                     Cycle                  @relation(fields: [cycleId], references: [id])
+  asset                     Asset                  @relation(fields: [assetTagCd], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  currentMotorLifterAsset   Asset?                 @relation("CurrentMotorLifterRelation", fields: [currentMotorLifter], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  currentMotorTransferAsset Asset?                 @relation("CurrentMotorTransferRelation", fields: [currentMotorTransfer], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  tempMotorLifterAsset      Asset?                 @relation("TempMotorLifterRelation", fields: [tempMotorLifter], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  tempMotorTransferAsset    Asset?                 @relation("TempMotorTransferRelation", fields: [tempMotorTransfer], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
   sp                        Sp[]
   ohcDescriptions           OhcDescription[]
+  OHCMonitoringHistory      OHCMonitoringHistory[]
 
   @@map("ohc")
+}
+
+model OHCMonitoringHistory {
+  id                   Int      @id @default(autoincrement())
+  ohcId                Int
+  timestamp            DateTime
+  currentMotorLifter   Float
+  currentMotorTransfer Float
+  tempMotorLifter      Float
+  tempMotorTransfer    Float
+  ohc                  Ohc      @relation(fields: [ohcId], references: [id])
+
+  @@index([ohcId, timestamp])
 }
 
 model OhcDescription {

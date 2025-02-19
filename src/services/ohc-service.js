@@ -13,7 +13,7 @@ const MONITORING_CONFIG = {
     },
     THRESHOLDS: {
         MOTOR_CURRENT: {
-            MIN: 20,
+            MIN: 261,
             MAX: 290
         },
         MOTOR_TEMP: {
@@ -73,10 +73,10 @@ export class MetricsCalculator {
         const { MOTOR_CURRENT, MOTOR_TEMP } = MONITORING_CONFIG.THRESHOLDS;
 
         return [
-            this.isOutOfRange(Number(data.currentMotorLifter), MOTOR_CURRENT.MIN, MOTOR_CURRENT.MAX),
-            this.isOutOfRange(Number(data.currentMotorTransfer), MOTOR_CURRENT.MIN, MOTOR_CURRENT.MAX),
-            this.isOutOfRange(Number(data.tempMotorLifter), MOTOR_TEMP.MIN, MOTOR_TEMP.MAX),
-            this.isOutOfRange(Number(data.tempMotorTransfer), MOTOR_TEMP.MIN, MOTOR_TEMP.MAX)
+            this.isOutOfRange(Number(data.currentMotorLifterAsset.value), MOTOR_CURRENT.MIN, MOTOR_CURRENT.MAX),
+            this.isOutOfRange(Number(data.currentMotorTransferAsset.value), MOTOR_CURRENT.MIN, MOTOR_CURRENT.MAX),
+            this.isOutOfRange(Number(data.tempMotorLifterAsset.value), MOTOR_TEMP.MIN, MOTOR_TEMP.MAX),
+            this.isOutOfRange(Number(data.tempMotorTransferAsset.value), MOTOR_TEMP.MIN, MOTOR_TEMP.MAX)
         ].filter(Boolean).length;
     }
 }
@@ -103,7 +103,13 @@ export class OHCMonitoringSystem {
 
             // Get latest OHC data after asset service update
             const updatedOhc = await prisma.ohc.findUnique({
-                where: { id: ohc.id }
+                where: { id: ohc.id },
+                include: {
+                    currentMotorLifterAsset: { select: { value: true } },
+                    currentMotorTransferAsset: { select: { value: true } },
+                    tempMotorLifterAsset: { select: { value: true } },
+                    tempMotorTransferAsset: { select: { value: true } },
+                }
             });
 
             // Calculate metrics
@@ -182,9 +188,84 @@ export class OHCMonitoringSystem {
             performance: ohcs[1].performance,
         };
 
+        const generateTimePoints = () => {
+            const timePoints = [];
+            for (let hour = 0; hour < 24; hour++) {
+                for (let minute of [0, 30]) {
+                    const time = moment().hour(hour).minute(minute).format('HH:mm');
+                    timePoints.push(time);
+                }
+            }
+            return timePoints;
+        };
+
+        const timePoints = generateTimePoints();
+        function isAbnormal(value, min, max) {
+            return value < min || value > max;
+        }
+        const { MOTOR_CURRENT, MOTOR_TEMP } = MONITORING_CONFIG.THRESHOLDS;
+
+        // Ambil data history 24 jam terakhir
+        const startTime = moment().subtract(24, 'hours').toDate();
+
+        // Ambil history untuk semua OHC
+        const histories = await prisma.oHCMonitoringHistory.findMany({
+            where: {
+                timestamp: {
+                    gte: startTime
+                }
+            },
+            orderBy: {
+                timestamp: 'asc'
+            }
+        });
+
+        // Kelompokkan history berdasarkan OHC
+        const historyByOhc = histories.reduce((acc, history) => {
+            if (!acc[history.ohcId]) {
+                acc[history.ohcId] = [];
+            }
+            acc[history.ohcId].push(history);
+            return acc;
+        }, {});
+
         ohcs = ohcs.map(element => {
+            const ohcHistory = historyByOhc[element.id] || [];
+
+            const monitoringData = {
+                currentLifter: {
+                    abnormal: isAbnormal(Number(element.currentMotorLifterAsset.value), MOTOR_CURRENT.MIN, MOTOR_CURRENT.MAX),
+                    data: ohcHistory.map(h => ({
+                        time: moment(h.timestamp).format('HH:mm'),
+                        value: h.currentMotorLifter
+                    }))
+                },
+                currentTransfer: {
+                    abnormal: isAbnormal(Number(element.currentMotorTransferAsset.value), MOTOR_CURRENT.MIN, MOTOR_CURRENT.MAX),
+                    data: ohcHistory.map(h => ({
+                        time: moment(h.timestamp).format('HH:mm'),
+                        value: h.currentMotorTransfer
+                    }))
+                },
+                tempLifter: {
+                    abnormal: isAbnormal(Number(element.tempMotorLifterAsset.value), MOTOR_TEMP.MIN, MOTOR_TEMP.MAX),
+                    data: ohcHistory.map(h => ({
+                        time: moment(h.timestamp).format('HH:mm'),
+                        value: h.tempMotorLifter
+                    }))
+                },
+                tempTransfer: {
+                    abnormal: isAbnormal(Number(element.tempMotorTransferAsset.value), MOTOR_TEMP.MIN, MOTOR_TEMP.MAX),
+                    data: ohcHistory.map(h => ({
+                        time: moment(h.timestamp).format('HH:mm'),
+                        value: h.tempMotorTransfer
+                    }))
+                }
+            };
+
             return {
                 ...element,
+                monitoringData,
                 runningTime: TimeUtils.formatDuration(element.runningTime),
                 stopTime: TimeUtils.formatDuration(element.stopTime),
                 cycleTime: TimeUtils.formatDuration(element.cycleTime)
@@ -253,7 +334,41 @@ export class OHCMonitoringService {
             timezone: "Asia/Jakarta"
         });
 
+        // Tambahkan job untuk menyimpan history setiap 30 menit
+        cron.schedule('*/30 * * * *', async () => {
+            console.log('Saving monitoring history');
+            await this.saveMonitoringHistory();
+        }, {
+            timezone: "Asia/Jakarta"
+        });
+
         console.log('Cron jobs scheduled for monitoring');
+    }
+
+    async saveMonitoringHistory() {
+        const ohcs = await prisma.ohc.findMany({
+            include: {
+                currentMotorLifterAsset: true,
+                currentMotorTransferAsset: true,
+                tempMotorLifterAsset: true,
+                tempMotorTransferAsset: true,
+            }
+        });
+
+        const timestamp = moment().startOf('minute');
+
+        for (const ohc of ohcs) {
+            await prisma.oHCMonitoringHistory.create({
+                data: {
+                    ohcId: ohc.id,
+                    timestamp: timestamp.toDate(),
+                    currentMotorLifter: Number(ohc.currentMotorLifterAsset.value),
+                    currentMotorTransfer: Number(ohc.currentMotorTransferAsset.value),
+                    tempMotorLifter: Number(ohc.tempMotorLifterAsset.value),
+                    tempMotorTransfer: Number(ohc.tempMotorTransferAsset.value)
+                }
+            });
+        }
     }
 
     async logStatus() {
