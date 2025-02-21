@@ -1,7 +1,27 @@
 import prisma from "../database.js"
+import moment from 'moment-timezone';
 import { ResponseError } from "../err/err-response.js"
 import { createAssetValidation, resetCycleValidation, updateAssetValidation } from "../validation/asset-schema.js"
 import { validation } from "../validation/validation.js"
+
+moment.tz.setDefault("Asia/Jakarta");
+const MONITORING_CONFIG = {
+    UPDATE_INTERVAL: 1000,
+    WORKING_HOURS: {
+        SHIFT_1: { start: 7, end: 15 },
+        SHIFT_2: { start: 16, end: 24 }
+    },
+    THRESHOLDS: {
+        MOTOR_CURRENT: {
+            MIN: 70,
+            MAX: 90
+        },
+        MOTOR_TEMP: {
+            MIN: 70,
+            MAX: 90
+        }
+    }
+};
 
 const createAsset = async (request) => {
     const data = validation(createAssetValidation, request)
@@ -160,31 +180,15 @@ const updateAsset = async (request) => {
 
     if (sp) {
         const ohc = await prisma.ohc.findFirst({
-            where: { name: `OHC${updateAsset.value}` }
+            where: { name: `OHC ${updateAsset.value}` }
         });
-
         const ohcId = ohc?.id || null;
-        if (ohcId) {
-            await prisma.ohc.update({
-                where: { id: ohcId },
-                data: {
-                    condition: 'No Body',
-                    cycleTime: getRandomVariation(98, 5),
-                    // currentMotorLifter: getRandomVariation(230, 20),
-                    // currentMotorTransfer: getRandomVariation(150, 15),
-                    // tempMotorLifter: getRandomVariation(60, 5),
-                    // tempMotorTransfer: getRandomVariation(40, 5),
-                    okCondition: Math.floor(getRandomVariation(843, 50)),
-                    ngCondition: Math.floor(getRandomVariation(157, 20)),
-                }
-            });
-        }
-
         await prisma.sp.update({
             where: { id: sp.id },
             data: { ohcId }
         })
     }
+    await createWarningRecords()
 
     valueChanges.push({
         groupName: '',
@@ -198,6 +202,58 @@ const updateAsset = async (request) => {
 
     return updateAsset;
 }
+
+const createWarningRecords = async () => {
+    const { MOTOR_CURRENT, MOTOR_TEMP } = MONITORING_CONFIG.THRESHOLDS;
+    const ohcs = await prisma.ohc.findMany({
+        orderBy: { name: 'asc' },
+        include: {
+            asset: true,
+            sp: true,
+            cycle: { include: { cycleDescription: true } },
+            ohcDescriptions: { include: { asset: true } },
+            currentMotorLifterAsset: { select: { value: true } },
+            currentMotorTransferAsset: { select: { value: true } },
+            tempMotorLifterAsset: { select: { value: true } },
+            tempMotorTransferAsset: { select: { value: true } },
+        }
+    });
+
+    const currentDate = moment();
+    const warningRecords = [];
+
+    for (const ohc of ohcs) {
+        let type = null
+        if (Number(ohc.currentMotorLifterAsset.value) > MOTOR_CURRENT.MAX) {
+            type = 'High Current Motor Lifter';
+        }
+        if (Number(ohc.currentMotorTransferAsset.value) > MOTOR_CURRENT.MAX) {
+            type = 'High Current Motor Transfer';
+        }
+        if (Number(ohc.tempMotorLifterAsset.value) > MOTOR_TEMP.MAX) {
+            type = 'High Temp Motor Lifter';
+        }
+        if (Number(ohc.tempMotorTransferAsset.value) > MOTOR_TEMP.MAX) {
+            type = 'High Temp Motor Transfer'
+        }
+        if (type) {
+            const warningRecord = {
+                date: currentDate.format('DD'),
+                month: currentDate.format('MMMM'),
+                year: currentDate.format('YYYY'),
+                type,
+                detail: ohc.name,
+            };
+            warningRecords.push(warningRecord);
+        }
+    }
+
+    if (warningRecords.length > 0) {
+        await prisma.warningRecord.createMany({
+            data: warningRecords,
+        });
+    }
+};
 
 const deleteAsset = async (ulid) => {
     const asset = await prisma.asset.findUnique({
@@ -351,7 +407,7 @@ async function updateOhcAssignments(sps) {
     const ohcs = await prisma.ohc.findMany({
         where: {
             name: {
-                in: Array.from({ length: 6 }, (_, i) => `OHC${i + 1}`)
+                in: Array.from({ length: 6 }, (_, i) => `OHC ${i + 1}`)
             }
         }
     });
@@ -378,7 +434,7 @@ async function updateOhcAssignments(sps) {
             }
             // Otherwise, newValue remains 0
 
-            const ohcName = `OHC${newValue}`;
+            const ohcName = `OHC ${newValue}`;
             const ohc = ohcMap.get(ohcName);
             if (!ohc) {
                 console.warn(`OHC not found: ${ohcName}`);

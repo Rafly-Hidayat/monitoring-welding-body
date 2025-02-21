@@ -13,12 +13,12 @@ const MONITORING_CONFIG = {
     },
     THRESHOLDS: {
         MOTOR_CURRENT: {
-            MIN: 261,
-            MAX: 290
+            MIN: 70,
+            MAX: 90
         },
         MOTOR_TEMP: {
-            MIN: 112,
-            MAX: 125
+            MIN: 70,
+            MAX: 90
         }
     }
 };
@@ -299,8 +299,8 @@ export class OHCMonitoringSystem {
                 cycleTime: TimeUtils.formatDuration(element.cycleTime)
             }
         });
-
-        return { summary, ohcs, sp };
+        const warningRecord = await prisma.warningRecord.findMany({})
+        return { summary, ohcs, sp, warningRecord };
     }
 }
 
