@@ -350,7 +350,7 @@ export class OHCMonitoringSystem {
         const warningRecord = {
             data: warningRecords,
             byType: typeData,
-            byMoth: monthlyData,
+            byMonth: monthlyData,
             byYear: yearlyData
         }
         return { summary, ohcs, sp, warningRecord };
