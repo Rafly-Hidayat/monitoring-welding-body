@@ -4,6 +4,7 @@ import { ResponseError } from "../err/err-response.js"
 import { createAssetValidation, resetCycleValidation, updateAssetValidation } from "../validation/asset-schema.js"
 import { validation } from "../validation/validation.js"
 import ohcService from "./ohc-service.js";
+import 'moment/locale/id.js';
 
 moment.tz.setDefault("Asia/Jakarta");
 const sensorCycleMapping = {

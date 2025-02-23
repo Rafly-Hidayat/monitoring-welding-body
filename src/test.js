@@ -3,364 +3,364 @@ import prisma from './database.js';
 const warningData = [
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Current",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Current",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Current",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Current",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Current",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Current",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Current",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Current",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "30",
-        month: "October",
+        month: "Januari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "21",
-        month: "November",
+        month: "Februari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "21",
-        month: "November",
+        month: "Februari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"
     },
     {
         date: "21",
-        month: "November",
+        month: "Februari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 3"
     },
     {
         date: "21",
-        month: "November",
+        month: "Februari",
         year: "2025",
         type: "High Current",
         detail: "OHC 5"
     },
     {
         date: "21",
-        month: "November",
+        month: "Februari",
         year: "2025",
         type: "High Current",
         detail: "OHC 3"
     },
     {
         date: "21",
-        month: "November",
+        month: "Februari",
         year: "2025",
         type: "High Current",
         detail: "OHC 5"
     },
     {
         date: "21",
-        month: "November",
+        month: "Februari",
         year: "2025",
         type: "High Current",
         detail: "OHC 3"
     },
     {
         date: "21",
-        month: "November",
+        month: "Februari",
         year: "2025",
         type: "High Current",
         detail: "OHC 5"
     },
     {
         date: "21",
-        month: "November",
+        month: "Februari",
         year: "2025",
         type: "High Current",
         detail: "OHC 3"
     },
     {
         date: "21",
-        month: "November",
+        month: "Februari",
         year: "2025",
         type: "High Temp",
         detail: "OHC 5"

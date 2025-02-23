@@ -4,6 +4,7 @@ import prisma from "../database.js";
 import assetService from './asset-service.js';
 import { updateCycleValidation } from '../validation/ohc-schema.js';
 import { validation } from '../validation/validation.js';
+import 'moment/locale/id.js';
 
 moment.tz.setDefault("Asia/Jakarta");
 
@@ -11,7 +12,7 @@ const MONITORING_CONFIG = {
     UPDATE_INTERVAL: 1000,
     WORKING_HOURS: {
         SHIFT_1: { start: 7, end: 15 },
-        SHIFT_2: { start: 16, end: 24 }
+        SHIFT_2: { start: 15, end: 24 }
     },
     THRESHOLDS: {
         MOTOR_CURRENT: {
@@ -303,8 +304,8 @@ export class OHCMonitoringSystem {
         });
         const warningRecords = await prisma.warningRecord.findMany({})
 
-        const year = message?.year || new Date().getFullYear().toString();
-        const month = message?.month;
+        const year = message?.year || moment().format('YYYY');
+        const month = message?.month || moment().format('MMMM')
 
         // Get warning records with filters
         const whereClause = { year };
@@ -323,6 +324,16 @@ export class OHCMonitoringSystem {
         }));
 
         // Get monthly statistics
+        const allMonths = Array.from({ length: 12 }, (_, i) =>
+            moment().month(i).format('MMMM')
+        );
+        const baseMonthlyData = allMonths.map(month => ({
+            month: month,
+            count: 0
+        }));
+
+
+        // Get actual monthly data from database
         const monthlyDataRaw = await prisma.warningRecord.groupBy({
             by: ['month'],
             where: { year },
@@ -330,9 +341,18 @@ export class OHCMonitoringSystem {
                 id: true
             }
         });
-        const monthlyData = monthlyDataRaw.map(record => ({
-            month: record.month,
-            count: record._count.id
+
+        // Convert English month names to Indonesian and merge with base data
+        const monthlyDataMap = monthlyDataRaw.reduce((acc, record) => {
+            const indonesianMonth = moment().month(record.month).format('MMMM');
+            acc[indonesianMonth] = record._count.id;
+            return acc;
+        }, {});
+
+        // Merge actual counts with base data
+        const monthlyData = baseMonthlyData.map(item => ({
+            month: item.month,
+            count: monthlyDataMap[item.month] || 0
         }));
 
         // Get yearly statistics
