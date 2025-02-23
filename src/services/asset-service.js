@@ -5,392 +5,9 @@ import { createAssetValidation, resetCycleValidation, updateAssetValidation } fr
 import { validation } from "../validation/validation.js"
 import ohcService from "./ohc-service.js";
 import 'moment/locale/id.js';
+import dataHelper from "../helper/data-helper.js";
 
 moment.tz.setDefault("Asia/Jakarta");
-const sensorCycleMapping = {
-    // SP1
-    'X700': {
-        cycleName: 'SP 1',
-        descriptionName: 'STOPPER',
-        condition: { from: "0", to: "1" }
-    },
-    'X702': {
-        cycleName: 'SP 1',
-        descriptionName: 'POSITIONER',
-        condition: { from: "0", to: "1" }
-    },
-
-    // SP7
-    'X740': {
-        cycleName: 'SP 7',
-        descriptionName: 'STOPPER',
-        condition: { from: "0", to: "1" }
-    },
-    'X742': {
-        cycleName: 'SP 7',
-        descriptionName: 'POSITIONER',
-        condition: { from: "0", to: "1" }
-    },
-    'X751': {
-        cycleName: 'SP 7',
-        descriptionName: 'Pusher',
-        condition: { from: "0", to: "1" }
-    },
-
-    // SP8
-    'X7A8': {
-        cycleName: 'SP 8',
-        descriptionName: 'STOPPER',
-        condition: { from: "0", to: "1" }
-    },
-    'X7AA': {
-        cycleName: 'SP 8',
-        descriptionName: 'POSITIONER',
-        condition: { from: "0", to: "1" }
-    },
-
-    // OHC1
-    'X0211': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Lift Up',
-        condition: { from: "0", to: "1" }
-    },
-    'X0251': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Lift Down',
-        condition: { from: "1", to: "0" }
-    },
-    'X0221': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Collision',
-        condition: { from: "0", to: "1" }
-    },
-    'X0261': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Hanger L Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0271': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Hanger L Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X0281': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Hanger R Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0291': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Hanger R Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X02A1': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Chain Fault FL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02B1': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Chain Fault FR',
-        condition: { from: "0", to: "1" }
-    },
-    'X02C1': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Chain Fault RL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02D1': {
-        cycleName: 'OHC 1',
-        descriptionName: 'Chain Fault RR',
-        condition: { from: "0", to: "1" }
-    },
-
-    // OHC2
-    'X0212': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Lift Up',
-        condition: { from: "0", to: "1" }
-    },
-    'X0252': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Lift Down',
-        condition: { from: "1", to: "0" }
-    },
-    'X0222': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Collision',
-        condition: { from: "0", to: "1" }
-    },
-    'X0262': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Hanger L Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0272': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Hanger L Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X0282': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Hanger R Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0292': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Hanger R Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X02A2': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Chain Fault FL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02B2': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Chain Fault FR',
-        condition: { from: "0", to: "1" }
-    },
-    'X02C2': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Chain Fault RL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02D2': {
-        cycleName: 'OHC 2',
-        descriptionName: 'Chain Fault RR',
-        condition: { from: "0", to: "1" }
-    },
-
-    // OHC3
-    'X0213': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Lift Up',
-        condition: { from: "0", to: "1" }
-    },
-    'X0253': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Lift Down',
-        condition: { from: "1", to: "0" }
-    },
-    'X0223': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Collision',
-        condition: { from: "0", to: "1" }
-    },
-    'X0263': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Hanger L Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0273': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Hanger L Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X0283': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Hanger R Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0293': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Hanger R Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X02A3': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Chain Fault FL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02B3': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Chain Fault FR',
-        condition: { from: "0", to: "1" }
-    },
-    'X02C3': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Chain Fault RL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02D3': {
-        cycleName: 'OHC 3',
-        descriptionName: 'Chain Fault RR',
-        condition: { from: "0", to: "1" }
-    },
-
-    // OHC4
-    'X0214': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Lift Up',
-        condition: { from: "0", to: "1" }
-    },
-    'X0254': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Lift Down',
-        condition: { from: "1", to: "0" }
-    },
-    'X0224': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Collision',
-        condition: { from: "0", to: "1" }
-    },
-    'X0264': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Hanger L Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0274': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Hanger L Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X0284': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Hanger R Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0294': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Hanger R Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X02A4': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Chain Fault FL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02B4': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Chain Fault FR',
-        condition: { from: "0", to: "1" }
-    },
-    'X02C4': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Chain Fault RL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02D4': {
-        cycleName: 'OHC 4',
-        descriptionName: 'Chain Fault RR',
-        condition: { from: "0", to: "1" }
-    },
-
-    // OHC5
-    'X0215': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Lift Up',
-        condition: { from: "0", to: "1" }
-    },
-    'X0255': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Lift Down',
-        condition: { from: "1", to: "0" }
-    },
-    'X0225': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Collision',
-        condition: { from: "0", to: "1" }
-    },
-    'X0265': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Hanger L Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0275': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Hanger L Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X0285': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Hanger R Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0295': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Hanger R Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X02A5': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Chain Fault FL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02B5': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Chain Fault FR',
-        condition: { from: "0", to: "1" }
-    },
-    'X02C5': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Chain Fault RL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02D5': {
-        cycleName: 'OHC 5',
-        descriptionName: 'Chain Fault RR',
-        condition: { from: "0", to: "1" }
-    },
-
-    // OHC6
-    'X0216': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Lift Up',
-        condition: { from: "0", to: "1" }
-    },
-    'X0256': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Lift Down',
-        condition: { from: "1", to: "0" }
-    },
-    'X0226': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Collision',
-        condition: { from: "0", to: "1" }
-    },
-    'X0266': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Hanger L Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0276': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Hanger L Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X0286': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Hanger R Close',
-        condition: { from: "1", to: "0" }
-    },
-    'X0296': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Hanger R Open',
-        condition: { from: "0", to: "1" }
-    },
-    'X02A6': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Chain Fault FL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02B6': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Chain Fault FR',
-        condition: { from: "0", to: "1" }
-    },
-    'X02C6': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Chain Fault RL',
-        condition: { from: "0", to: "1" }
-    },
-    'X02D6': {
-        cycleName: 'OHC 6',
-        descriptionName: 'Chain Fault RR',
-        condition: { from: "0", to: "1" }
-    },
-};
 
 const createAsset = async (request) => {
     const data = validation(createAssetValidation, request)
@@ -468,7 +85,10 @@ const updateAsset = async (request) => {
         changed: oldValue !== newValue
     });
 
-    await processCycleUpdates(valueChanges, sensorCycleMapping);
+    await processConditionUpdates(valueChanges, dataHelper.sensorConditionMapping);
+    if (dataHelper.cycleAsset.includes(data.tagCd)) {
+        await processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping);
+    }
 
     return updateAsset;
 }
@@ -481,7 +101,7 @@ const createWarningRecords = async () => {
             asset: true,
             sp: true,
             cycle: { include: { cycleDescription: true } },
-            ohcDescriptions: true,
+            ohcConditions: true,
             currentMotorLifterAsset: { select: { value: true } },
             currentMotorTransferAsset: { select: { value: true } },
             tempMotorLifterAsset: { select: { value: true } },
@@ -570,7 +190,7 @@ const updateAssetInterval = async () => {
     };
     const changes = await processSensorUpdates(allSensors);
 
-    await processCycleUpdates(changes, sensorCycleMapping);
+    await processCycleUpdates(changes, dataHelper.sensorCycleMapping);
 };
 
 async function updateOhcAssignments(sps) {
@@ -765,6 +385,69 @@ const processCycleUpdates = async (changes, sensorCycleMapping) => {
     return updateLog;
 };
 
+const processConditionUpdates = async (changes, sensorConditionMapping) => {
+    const conditionCache = new Map();
+
+    for (const change of changes) {
+        if (!change.changed) continue;
+
+        const mapping = sensorConditionMapping[change.tagCd];
+        if (!mapping) continue;
+
+        // Cek kondisi perubahan
+        const { condition } = mapping;
+        if (change.oldValue !== condition.from || change.newValue !== condition.to) {
+            continue;
+        }
+
+        try {
+            const { conditionName, descriptionName } = mapping;
+
+            // Get condition from cache or database
+            let condition = conditionCache.get(conditionName);
+            if (dataHelper.spConditionAsset.includes(change.tagCd)) {
+                if (!condition) {
+                    condition = await prisma.spCondition.findFirst({
+                        where: { name: descriptionName },
+                    });
+
+                    if (!condition) {
+                        throw new Error(`condition ${conditionName} not found`);
+                    }
+
+                    conditionCache.set(conditionName, condition);
+                }
+
+                // Update description
+                await prisma.spCondition.update({
+                    where: { id: condition.id },
+                    data: { actualValue: condition.actualValue + 1 }
+                });
+            } else if (dataHelper.ohcConditionAsset.includes(change.tagCd)) {
+                if (!condition) {
+                    condition = await prisma.ohcCondition.findFirst({
+                        where: { name: descriptionName },
+                    });
+
+                    if (!condition) {
+                        throw new Error(`condition ${conditionName} not found`);
+                    }
+
+                    conditionCache.set(conditionName, condition);
+                }
+
+                // Update description
+                await prisma.ohcCondition.update({
+                    where: { id: condition.id },
+                    data: { actualValue: condition.actualValue + 1 }
+                });
+            }
+        } catch (error) {
+            console.error(`Error processing change for ${change.tagCd}:`, error);
+        }
+    }
+};
+
 const resetCycle = async (request) => {
     const data = validation(resetCycleValidation, request)
 
@@ -782,4 +465,4 @@ const resetCycle = async (request) => {
     })
 }
 
-export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, updateAssetInterval, resetCycle, processCycleUpdates, sensorCycleMapping }
+export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, updateAssetInterval, resetCycle, processCycleUpdates, processConditionUpdates }

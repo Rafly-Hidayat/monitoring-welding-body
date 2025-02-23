@@ -5,6 +5,8 @@ import assetService from './asset-service.js';
 import { updateCycleValidation } from '../validation/ohc-schema.js';
 import { validation } from '../validation/validation.js';
 import 'moment/locale/id.js';
+import dataHelper from '../helper/data-helper.js';
+import { ResponseError } from '../err/err-response.js';
 
 moment.tz.setDefault("Asia/Jakarta");
 
@@ -155,7 +157,7 @@ export class OHCMonitoringSystem {
                 asset: true,
                 sp: true,
                 cycle: { include: { cycleDescription: true } },
-                ohcDescriptions: true,
+                ohcConditions: true,
                 currentMotorLifterAsset: { select: { value: true } },
                 currentMotorTransferAsset: { select: { value: true } },
                 tempMotorLifterAsset: { select: { value: true } },
@@ -168,7 +170,7 @@ export class OHCMonitoringSystem {
             include: {
                 ohc: { select: { name: true } },
                 cycle: { include: { cycleDescription: true } },
-                spDescriptions: { include: { asset: true } },
+                spConditions: { include: { asset: true } },
             }
         });
 
@@ -500,36 +502,54 @@ export class OHCMonitoringService {
 }
 
 export const updateCycle = async (request) => {
-    const data = validation(updateCycleValidation, request)
+    const data = validation(updateCycleValidation, request);
 
-    const ohcDescriptions = await prisma.ohcDescription.findFirst({
-        where: { tagCd: data.tagCd, ohcId: data.ohc }
-    })
+    // Determine the condition table and query based on `isOhc`
+    const conditionTable = data.isOhc ? prisma.ohcCondition : prisma.spCondition;
+    const queryCondition = data.isOhc
+        ? { tagCd: data.tagCd, ohcId: data.ohc }
+        : { assetTagCd: data.tagCd };
 
-    if (!ohcDescriptions) {
-        throw new ResponseError(404, "OHC Cycle not found")
-    }
-
-    const updatedData = await prisma.ohcDescription.update({
-        where: { id: ohcDescriptions.id },
-        data: { value: data.value }
-    })
-
-    const oldValue = ohcDescriptions.value;
-    const newValue = updatedData.value;
-    const valueChanges = []
-
-
-    valueChanges.push({
-        groupName: '',
-        tagCd: `${updatedData.tagCd}${updatedData.ohcId}`,
-        oldValue,
-        newValue,
-        changed: oldValue !== newValue
+    // Find the existing condition record
+    const existingCondition = await conditionTable.findFirst({
+        where: queryCondition,
     });
 
-    await assetService.processCycleUpdates(valueChanges, assetService.sensorCycleMapping);
-    return updatedData;
-}
+    if (!existingCondition) {
+        throw new ResponseError(404, "Data tagCd not found");
+    }
+
+    // Update the condition record
+    const updatedData = await conditionTable.update({
+        where: { id: existingCondition.id },
+        data: { value: data.value },
+    });
+
+    // Track value changes
+    const oldValue = existingCondition.value;
+    const newValue = updatedData.value;
+    const tagCd = data.isOhc
+        ? `${updatedData.tagCd}${updatedData.ohcId}`
+        : updatedData.assetTagCd;
+
+    const valueChanges = [{
+        groupName: '',
+        tagCd,
+        oldValue,
+        newValue,
+        changed: oldValue !== newValue,
+    }];
+
+    // Process condition and cycle updates
+    await assetService.processConditionUpdates(valueChanges, dataHelper.sensorConditionMapping);
+    if (dataHelper.cycleAsset.includes(tagCd)) {
+        await assetService.processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping);
+    }
+
+    // Return the updated record
+    return conditionTable.findFirst({
+        where: queryCondition,
+    });
+};
 
 export default { MONITORING_CONFIG }

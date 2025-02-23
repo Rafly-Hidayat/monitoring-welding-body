@@ -133,32 +133,36 @@ async function main() {
         });
     }
 
-    // Create OhcDescriptions
-    const ohcDescriptions = XLSX.utils.sheet_to_json(workbook.Sheets['OhcDescriptions']);
-    for (const desc of ohcDescriptions) {
+    // Create OhcConditions
+    const ohcConditions = XLSX.utils.sheet_to_json(workbook.Sheets['OhcConditions']);
+    for (const desc of ohcConditions) {
         const ohc = await prisma.ohc.findUnique({
             where: { name: desc.ohcName }
         });
 
-        await prisma.ohcDescription.create({
+        await prisma.ohcCondition.create({
             data: {
                 ohcId: ohc.id,
-                tagCd: desc.tagCd
+                tagCd: desc.tagCd,
+                name: desc.name,
+                standardValue: desc.standardValue,
             }
         });
     }
 
-    // Create SpDescriptions
-    const spDescriptions = XLSX.utils.sheet_to_json(workbook.Sheets['SpDescriptions']);
-    for (const desc of spDescriptions) {
+    // Create SpConditions
+    const spConditions = XLSX.utils.sheet_to_json(workbook.Sheets['SpConditions']);
+    for (const desc of spConditions) {
         const sp = await prisma.sp.findUnique({
             where: { name: desc.spName }
         });
 
-        await prisma.spDescription.create({
+        await prisma.spCondition.create({
             data: {
                 spId: sp.id,
-                assetTagCd: desc.assetTagCd
+                assetTagCd: desc.assetTagCd,
+                name: desc.name,
+                standardValue: desc.standardValue,
             }
         });
     }
@@ -173,7 +177,6 @@ async function main() {
         await prisma.cycleDescription.create({
             data: {
                 name: desc.name,
-                actualValue: desc.actualValue,
                 standardValue: desc.standardValue,
                 cycleId: cycle.id
             }
