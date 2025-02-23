@@ -23,5 +23,6 @@ router.post("/cycle/reset", assetController.resetCycle);
 
 // OHC service
 router.get("/monitoring", ohcController.getOHCMetrics);
+router.put("/ohc/cycle", ohcController.updateCycleData);
 
 export default router;

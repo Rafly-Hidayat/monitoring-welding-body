@@ -1,4 +1,4 @@
-import { OHCMonitoringService } from "../services/ohc-service.js";
+import { OHCMonitoringService, updateCycle } from "../services/ohc-service.js";
 const ohcService = new OHCMonitoringService();
 
 const getOHCMetrics = async (req, res, next) => {
@@ -13,4 +13,16 @@ const getOHCMetrics = async (req, res, next) => {
     }
 }
 
-export default { getOHCMetrics }
+const updateCycleData = async (req, res, next) => {
+    try {
+        const result = await updateCycle(req.body);
+        res.status(200).json({
+            message: "Successfully update cycle ohc",
+            data: result
+        })
+    } catch (error) {
+        next(error);
+    }
+}
+
+export default { getOHCMetrics, updateCycleData }

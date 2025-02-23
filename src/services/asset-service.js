@@ -3,24 +3,392 @@ import moment from 'moment-timezone';
 import { ResponseError } from "../err/err-response.js"
 import { createAssetValidation, resetCycleValidation, updateAssetValidation } from "../validation/asset-schema.js"
 import { validation } from "../validation/validation.js"
+import ohcService from "./ohc-service.js";
 
 moment.tz.setDefault("Asia/Jakarta");
-const MONITORING_CONFIG = {
-    UPDATE_INTERVAL: 1000,
-    WORKING_HOURS: {
-        SHIFT_1: { start: 7, end: 15 },
-        SHIFT_2: { start: 16, end: 24 }
+const sensorCycleMapping = {
+    // SP1
+    'X700': {
+        cycleName: 'SP 1',
+        descriptionName: 'STOPPER',
+        condition: { from: "0", to: "1" }
     },
-    THRESHOLDS: {
-        MOTOR_CURRENT: {
-            MIN: 70,
-            MAX: 90
-        },
-        MOTOR_TEMP: {
-            MIN: 70,
-            MAX: 90
-        }
-    }
+    'X702': {
+        cycleName: 'SP 1',
+        descriptionName: 'POSITIONER',
+        condition: { from: "0", to: "1" }
+    },
+
+    // SP7
+    'X740': {
+        cycleName: 'SP 7',
+        descriptionName: 'STOPPER',
+        condition: { from: "0", to: "1" }
+    },
+    'X742': {
+        cycleName: 'SP 7',
+        descriptionName: 'POSITIONER',
+        condition: { from: "0", to: "1" }
+    },
+    'X751': {
+        cycleName: 'SP 7',
+        descriptionName: 'Pusher',
+        condition: { from: "0", to: "1" }
+    },
+
+    // SP8
+    'X7A8': {
+        cycleName: 'SP 8',
+        descriptionName: 'STOPPER',
+        condition: { from: "0", to: "1" }
+    },
+    'X7AA': {
+        cycleName: 'SP 8',
+        descriptionName: 'POSITIONER',
+        condition: { from: "0", to: "1" }
+    },
+
+    // OHC1
+    'X0211': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Lift Up',
+        condition: { from: "0", to: "1" }
+    },
+    'X0251': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Lift Down',
+        condition: { from: "1", to: "0" }
+    },
+    'X0221': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Collision',
+        condition: { from: "0", to: "1" }
+    },
+    'X0261': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Hanger L Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0271': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Hanger L Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X0281': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Hanger R Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0291': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Hanger R Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X02A1': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Chain Fault FL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02B1': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Chain Fault FR',
+        condition: { from: "0", to: "1" }
+    },
+    'X02C1': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Chain Fault RL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02D1': {
+        cycleName: 'OHC 1',
+        descriptionName: 'Chain Fault RR',
+        condition: { from: "0", to: "1" }
+    },
+
+    // OHC2
+    'X0212': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Lift Up',
+        condition: { from: "0", to: "1" }
+    },
+    'X0252': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Lift Down',
+        condition: { from: "1", to: "0" }
+    },
+    'X0222': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Collision',
+        condition: { from: "0", to: "1" }
+    },
+    'X0262': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Hanger L Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0272': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Hanger L Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X0282': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Hanger R Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0292': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Hanger R Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X02A2': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Chain Fault FL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02B2': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Chain Fault FR',
+        condition: { from: "0", to: "1" }
+    },
+    'X02C2': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Chain Fault RL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02D2': {
+        cycleName: 'OHC 2',
+        descriptionName: 'Chain Fault RR',
+        condition: { from: "0", to: "1" }
+    },
+
+    // OHC3
+    'X0213': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Lift Up',
+        condition: { from: "0", to: "1" }
+    },
+    'X0253': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Lift Down',
+        condition: { from: "1", to: "0" }
+    },
+    'X0223': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Collision',
+        condition: { from: "0", to: "1" }
+    },
+    'X0263': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Hanger L Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0273': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Hanger L Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X0283': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Hanger R Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0293': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Hanger R Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X02A3': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Chain Fault FL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02B3': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Chain Fault FR',
+        condition: { from: "0", to: "1" }
+    },
+    'X02C3': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Chain Fault RL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02D3': {
+        cycleName: 'OHC 3',
+        descriptionName: 'Chain Fault RR',
+        condition: { from: "0", to: "1" }
+    },
+
+    // OHC4
+    'X0214': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Lift Up',
+        condition: { from: "0", to: "1" }
+    },
+    'X0254': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Lift Down',
+        condition: { from: "1", to: "0" }
+    },
+    'X0224': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Collision',
+        condition: { from: "0", to: "1" }
+    },
+    'X0264': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Hanger L Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0274': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Hanger L Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X0284': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Hanger R Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0294': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Hanger R Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X02A4': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Chain Fault FL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02B4': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Chain Fault FR',
+        condition: { from: "0", to: "1" }
+    },
+    'X02C4': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Chain Fault RL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02D4': {
+        cycleName: 'OHC 4',
+        descriptionName: 'Chain Fault RR',
+        condition: { from: "0", to: "1" }
+    },
+
+    // OHC5
+    'X0215': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Lift Up',
+        condition: { from: "0", to: "1" }
+    },
+    'X0255': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Lift Down',
+        condition: { from: "1", to: "0" }
+    },
+    'X0225': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Collision',
+        condition: { from: "0", to: "1" }
+    },
+    'X0265': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Hanger L Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0275': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Hanger L Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X0285': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Hanger R Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0295': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Hanger R Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X02A5': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Chain Fault FL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02B5': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Chain Fault FR',
+        condition: { from: "0", to: "1" }
+    },
+    'X02C5': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Chain Fault RL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02D5': {
+        cycleName: 'OHC 5',
+        descriptionName: 'Chain Fault RR',
+        condition: { from: "0", to: "1" }
+    },
+
+    // OHC6
+    'X0216': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Lift Up',
+        condition: { from: "0", to: "1" }
+    },
+    'X0256': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Lift Down',
+        condition: { from: "1", to: "0" }
+    },
+    'X0226': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Collision',
+        condition: { from: "0", to: "1" }
+    },
+    'X0266': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Hanger L Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0276': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Hanger L Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X0286': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Hanger R Close',
+        condition: { from: "1", to: "0" }
+    },
+    'X0296': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Hanger R Open',
+        condition: { from: "0", to: "1" }
+    },
+    'X02A6': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Chain Fault FL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02B6': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Chain Fault FR',
+        condition: { from: "0", to: "1" }
+    },
+    'X02C6': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Chain Fault RL',
+        condition: { from: "0", to: "1" }
+    },
+    'X02D6': {
+        cycleName: 'OHC 6',
+        descriptionName: 'Chain Fault RR',
+        condition: { from: "0", to: "1" }
+    },
 };
 
 const createAsset = async (request) => {
@@ -63,105 +431,6 @@ const updateAsset = async (request) => {
     if (!asset) {
         throw new ResponseError(404, "Asset not found")
     }
-    const sensorCycleMapping = {
-        // SP1
-        'X700': {
-            cycleName: 'Cycle SP1',
-            descriptionName: 'STOPPER',
-            condition: { from: "0", to: "1" }
-        },
-        'X702': {
-            cycleName: 'Cycle SP1',
-            descriptionName: 'POSITIONER',
-            condition: { from: "0", to: "1" }
-        },
-
-        // SP7
-        'X740': {
-            cycleName: 'Cycle SP7',
-            descriptionName: 'STOPPER',
-            condition: { from: "0", to: "1" }
-        },
-        'X742': {
-            cycleName: 'Cycle SP7',
-            descriptionName: 'POSITIONER',
-            condition: { from: "0", to: "1" }
-        },
-        'X751': {
-            cycleName: 'Cycle SP7',
-            descriptionName: 'Pusher',
-            condition: { from: "0", to: "1" }
-        },
-
-        // SP8
-        'X7A8': {
-            cycleName: 'Cycle SP8',
-            descriptionName: 'STOPPER',
-            condition: { from: "0", to: "1" }
-        },
-        'X7AA': {
-            cycleName: 'Cycle SP8',
-            descriptionName: 'POSITIONER',
-            condition: { from: "0", to: "1" }
-        },
-
-        // OHC1
-        'X021': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Lift Up',
-            condition: { from: "0", to: "1" }
-        },
-        'X025': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Lift Down',
-            condition: { from: "1", to: "0" }
-        },
-        'X022': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Collision',
-            condition: { from: "0", to: "1" }
-        },
-        'X026': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Hanger L Close',
-            condition: { from: "1", to: "0" }
-        },
-        'X027': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Hanger L Open',
-            condition: { from: "0", to: "1" }
-        },
-        'X028': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Hanger R Close',
-            condition: { from: "1", to: "0" }
-        },
-        'X029': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Hanger R Open',
-            condition: { from: "0", to: "1" }
-        },
-        'X02A': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Chain Fault FL',
-            condition: { from: "0", to: "1" }
-        },
-        'X02B': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Chain Fault FR',
-            condition: { from: "0", to: "1" }
-        },
-        'X02C': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Chain Fault RL',
-            condition: { from: "0", to: "1" }
-        },
-        'X02D': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Chain Fault RR',
-            condition: { from: "0", to: "1" }
-        },
-    };
 
     const oldValue = asset.value;
     const newValue = data.value;
@@ -204,14 +473,14 @@ const updateAsset = async (request) => {
 }
 
 const createWarningRecords = async () => {
-    const { MOTOR_CURRENT, MOTOR_TEMP } = MONITORING_CONFIG.THRESHOLDS;
+    const { MOTOR_CURRENT, MOTOR_TEMP } = ohcService.MONITORING_CONFIG.THRESHOLDS;
     const ohcs = await prisma.ohc.findMany({
         orderBy: { name: 'asc' },
         include: {
             asset: true,
             sp: true,
             cycle: { include: { cycleDescription: true } },
-            ohcDescriptions: { include: { asset: true } },
+            ohcDescriptions: true,
             currentMotorLifterAsset: { select: { value: true } },
             currentMotorTransferAsset: { select: { value: true } },
             tempMotorLifterAsset: { select: { value: true } },
@@ -300,105 +569,6 @@ const updateAssetInterval = async () => {
     };
     const changes = await processSensorUpdates(allSensors);
 
-    const sensorCycleMapping = {
-        // SP1
-        'X700': {
-            cycleName: 'Cycle SP1',
-            descriptionName: 'STOPPER',
-            condition: { from: "0", to: "1" }
-        },
-        'X702': {
-            cycleName: 'Cycle SP1',
-            descriptionName: 'POSITIONER',
-            condition: { from: "0", to: "1" }
-        },
-
-        // SP7
-        'X740': {
-            cycleName: 'Cycle SP7',
-            descriptionName: 'STOPPER',
-            condition: { from: "0", to: "1" }
-        },
-        'X742': {
-            cycleName: 'Cycle SP7',
-            descriptionName: 'POSITIONER',
-            condition: { from: "0", to: "1" }
-        },
-        'X751': {
-            cycleName: 'Cycle SP7',
-            descriptionName: 'Pusher',
-            condition: { from: "0", to: "1" }
-        },
-
-        // SP8
-        'X7A8': {
-            cycleName: 'Cycle SP8',
-            descriptionName: 'STOPPER',
-            condition: { from: "0", to: "1" }
-        },
-        'X7AA': {
-            cycleName: 'Cycle SP8',
-            descriptionName: 'POSITIONER',
-            condition: { from: "0", to: "1" }
-        },
-
-        // OHC1
-        'X021': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Lift Up',
-            condition: { from: "0", to: "1" }
-        },
-        'X025': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Lift Down',
-            condition: { from: "1", to: "0" }
-        },
-        'X022': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Collision',
-            condition: { from: "0", to: "1" }
-        },
-        'X026': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Hanger L Close',
-            condition: { from: "1", to: "0" }
-        },
-        'X027': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Hanger L Open',
-            condition: { from: "0", to: "1" }
-        },
-        'X028': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Hanger R Close',
-            condition: { from: "1", to: "0" }
-        },
-        'X029': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Hanger R Open',
-            condition: { from: "0", to: "1" }
-        },
-        'X02A': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Chain Fault FL',
-            condition: { from: "0", to: "1" }
-        },
-        'X02B': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Chain Fault FR',
-            condition: { from: "0", to: "1" }
-        },
-        'X02C': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Chain Fault RL',
-            condition: { from: "0", to: "1" }
-        },
-        'X02D': {
-            cycleName: 'Cycle OHC1',
-            descriptionName: 'Chain Fault RR',
-            condition: { from: "0", to: "1" }
-        },
-    };
     await processCycleUpdates(changes, sensorCycleMapping);
 };
 
@@ -611,4 +781,4 @@ const resetCycle = async (request) => {
     })
 }
 
-export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, updateAssetInterval, resetCycle }
+export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, updateAssetInterval, resetCycle, processCycleUpdates, sensorCycleMapping }

@@ -143,7 +143,7 @@ async function main() {
         await prisma.ohcDescription.create({
             data: {
                 ohcId: ohc.id,
-                assetTagCd: desc.assetTagCd
+                tagCd: desc.tagCd
             }
         });
     }

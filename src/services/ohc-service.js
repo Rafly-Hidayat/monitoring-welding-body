@@ -2,6 +2,8 @@ import moment from 'moment-timezone';
 import cron from 'node-cron';
 import prisma from "../database.js";
 import assetService from './asset-service.js';
+import { updateCycleValidation } from '../validation/ohc-schema.js';
+import { validation } from '../validation/validation.js';
 
 moment.tz.setDefault("Asia/Jakarta");
 
@@ -152,7 +154,7 @@ export class OHCMonitoringSystem {
                 asset: true,
                 sp: true,
                 cycle: { include: { cycleDescription: true } },
-                ohcDescriptions: { include: { asset: true } },
+                ohcDescriptions: true,
                 currentMotorLifterAsset: { select: { value: true } },
                 currentMotorTransferAsset: { select: { value: true } },
                 tempMotorLifterAsset: { select: { value: true } },
@@ -425,3 +427,38 @@ export class OHCMonitoringService {
         console.log('Monitoring system stopped');
     }
 }
+
+export const updateCycle = async (request) => {
+    const data = validation(updateCycleValidation, request)
+
+    const ohcDescriptions = await prisma.ohcDescription.findFirst({
+        where: { tagCd: data.tagCd, ohcId: data.ohc }
+    })
+
+    if (!ohcDescriptions) {
+        throw new ResponseError(404, "OHC Cycle not found")
+    }
+
+    const updatedData = await prisma.ohcDescription.update({
+        where: { id: ohcDescriptions.id },
+        data: { value: data.value }
+    })
+
+    const oldValue = ohcDescriptions.value;
+    const newValue = updatedData.value;
+    const valueChanges = []
+
+
+    valueChanges.push({
+        groupName: '',
+        tagCd: `${updatedData.tagCd}${updatedData.ohcId}`,
+        oldValue,
+        newValue,
+        changed: oldValue !== newValue
+    });
+
+    await assetService.processCycleUpdates(valueChanges, assetService.sensorCycleMapping);
+    return updatedData;
+}
+
+export default { MONITORING_CONFIG }
