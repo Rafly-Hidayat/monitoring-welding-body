@@ -76,4 +76,28 @@ const resetCycle = async (req, res, next) => {
     }
 }
 
-export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, resetCycle }
+const resetOhcCondition = async (req, res, next) => {
+    try {
+        const result = await assetService.resetOhcCondition(req.body)
+        res.status(200).json({
+            message: "Successfully reset Ohc Condition",
+            data: result
+        })
+    } catch (error) {
+        next(error);
+    }
+}
+
+const resetSpCondition = async (req, res, next) => {
+    try {
+        const result = await assetService.resetSpCondition(req.body)
+        res.status(200).json({
+            message: "Successfully reset Sp Condition",
+            data: result
+        })
+    } catch (error) {
+        next(error);
+    }
+}
+
+export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, resetCycle, resetOhcCondition, resetSpCondition }

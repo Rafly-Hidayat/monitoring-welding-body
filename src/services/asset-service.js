@@ -465,4 +465,38 @@ const resetCycle = async (request) => {
     })
 }
 
-export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, updateAssetInterval, resetCycle, processCycleUpdates, processConditionUpdates }
+const resetOhcCondition = async (request) => {
+    const data = validation(resetCycleValidation, request)
+
+    const ohcCondition = await prisma.ohcCondition.findUnique({
+        where: { id: data.id }
+    })
+
+    if (!ohcCondition) {
+        throw new ResponseError(404, "ohc Condition not found")
+    }
+
+    return prisma.ohcCondition.update({
+        where: { id: data.id },
+        data: { actualValue: 0 }
+    })
+}
+
+const resetSpCondition = async (request) => {
+    const data = validation(resetCycleValidation, request)
+
+    const spCondition = await prisma.spCondition.findUnique({
+        where: { id: data.id }
+    })
+
+    if (!spCondition) {
+        throw new ResponseError(404, "sp Condition not found")
+    }
+
+    return prisma.spCondition.update({
+        where: { id: data.id },
+        data: { actualValue: 0 }
+    })
+}
+
+export default { createAsset, getAllAssets, getAssetById, updateAsset, deleteAsset, updateAssetInterval, resetCycle, processCycleUpdates, processConditionUpdates, resetOhcCondition, resetSpCondition }
