@@ -147,7 +147,7 @@ export class OHCMonitoringSystem {
         }
     }
 
-    async getOHCMetrics() {
+    async getOHCMetrics(message = null) {
         const ohcData = await prisma.ohc.findMany({
             orderBy: { name: 'asc' },
             include: {
@@ -301,7 +301,58 @@ export class OHCMonitoringSystem {
                 cycleTime: TimeUtils.formatDuration(element.cycleTime)
             }
         });
-        const warningRecord = await prisma.warningRecord.findMany({})
+        const warningRecords = await prisma.warningRecord.findMany({})
+
+        const year = message?.year || new Date().getFullYear().toString();
+        const month = message?.month;
+
+        // Get warning records with filters
+        const whereClause = { year };
+        if (month) whereClause.month = month;
+        // Get type-based statistics
+        const typeDataRaw = await prisma.warningRecord.groupBy({
+            by: ['type'],
+            where: whereClause,
+            _count: {
+                id: true
+            }
+        });
+        const typeData = typeDataRaw.map(record => ({
+            type: record.type,
+            count: record._count.id
+        }));
+
+        // Get monthly statistics
+        const monthlyDataRaw = await prisma.warningRecord.groupBy({
+            by: ['month'],
+            where: { year },
+            _count: {
+                id: true
+            }
+        });
+        const monthlyData = monthlyDataRaw.map(record => ({
+            month: record.month,
+            count: record._count.id
+        }));
+
+        // Get yearly statistics
+        const yearlyDataRaw = await prisma.warningRecord.groupBy({
+            by: ['year'],
+            _count: {
+                id: true
+            }
+        });
+        const yearlyData = yearlyDataRaw.map(record => ({
+            year: record.year,
+            count: record._count.id
+        }));
+
+        const warningRecord = {
+            data: warningRecords,
+            byType: typeData,
+            byMoth: monthlyData,
+            byYear: yearlyData
+        }
         return { summary, ohcs, sp, warningRecord };
     }
 }

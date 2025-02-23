@@ -25,11 +25,12 @@ const port = 8000;
 
 // Create a monitoring service instance
 const ohcService = new OHCMonitoringService();
+let message = null
 
 // Override the logStatus method to emit data through Socket.IO
 ohcService.logStatus = async function () {
     try {
-        const metrics = await this.ohcSystem.getOHCMetrics();
+        const metrics = await this.ohcSystem.getOHCMetrics(message);
         // Emit the data to all connected clients
         io.emit('ohcStatus', metrics);
 
@@ -46,12 +47,24 @@ io.on('connection', async (socket) => {
 
     // Send initial data when client connects
     try {
-        const metrics = await ohcService.ohcSystem.getOHCMetrics();
+        const metrics = await ohcService.ohcSystem.getOHCMetrics(message);
         console.log('init value')
         socket.emit('ohcStatus', metrics);
     } catch (error) {
         console.error('Error sending initial data:', error);
     }
+
+    socket.on('getFilteredWarnigRecord', async (messageFilter) => {
+        try {
+            message = messageFilter
+            console.log('object', message)
+            const metrics = await ohcService.ohcSystem.getOHCMetrics(message);
+            socket.emit('ohcStatus', metrics);
+        } catch (error) {
+            console.error('Error getting filtered Warnig Record:', error);
+            socket.emit('error', { message: 'Error fetching Warnig Record' });
+        }
+    });
 
     socket.on('disconnect', () => {
         console.log('Client disconnected:', socket.id);
