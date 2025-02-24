@@ -102,6 +102,7 @@ const createWarningRecords = async () => {
             sp: true,
             cycle: { include: { cycleDescription: true } },
             ohcConditions: true,
+            ohcConditionRecord: true,
             currentMotorLifterAsset: { select: { value: true } },
             currentMotorTransferAsset: { select: { value: true } },
             tempMotorLifterAsset: { select: { value: true } },

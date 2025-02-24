@@ -87,18 +87,19 @@ model Cycle {
 }
 
 model Sp {
-  id           Int           @id @default(autoincrement())
-  ulid         String        @unique @default(uuid())
-  name         String        @unique
-  cycleId      Int           @map("cycle_id")
-  ohcId        Int?          @map("ohc_id")
-  assetTagCd   String        @map("asset_tag_cd")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  cycle        Cycle         @relation(fields: [cycleId], references: [id])
-  ohc          Ohc?          @relation(fields: [ohcId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  asset        Asset         @relation(fields: [assetTagCd], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
-  spConditions SpCondition[]
+  id                Int                 @id @default(autoincrement())
+  ulid              String              @unique @default(uuid())
+  name              String              @unique
+  cycleId           Int                 @map("cycle_id")
+  ohcId             Int?                @map("ohc_id")
+  assetTagCd        String              @map("asset_tag_cd")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  cycle             Cycle               @relation(fields: [cycleId], references: [id])
+  ohc               Ohc?                @relation(fields: [ohcId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  asset             Asset               @relation(fields: [assetTagCd], references: [tagCd], onDelete: NoAction, onUpdate: NoAction)
+  spConditions      SpCondition[]
+  spConditionRecord SpConditionRecord[]
 
   @@map("sp")
 }
@@ -153,6 +154,7 @@ model Ohc {
   sp                        Sp[]
   ohcConditions             OhcCondition[]
   OHCMonitoringHistory      OHCMonitoringHistory[]
+  ohcConditionRecord        OhcConditionRecord[]
 
   @@map("ohc")
 }
@@ -168,6 +170,7 @@ model OHCMonitoringHistory {
   ohc                  Ohc      @relation(fields: [ohcId], references: [id])
 
   @@index([ohcId, timestamp])
+  @@map("ohc_monitoring_history")
 }
 
 model OhcCondition {
@@ -212,4 +215,38 @@ model WarningRecord {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("warning_records")
+}
+
+model OhcConditionRecord {
+  id          Int      @id @default(autoincrement())
+  ulid        String   @unique @default(uuid())
+  ohcId       Int      @map("ohc_id")
+  date        String
+  month       String
+  year        String
+  tagCd       String
+  description String
+  value       String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  ohc         Ohc      @relation(fields: [ohcId], references: [id])
+
+  @@map("ohc_condition_records")
+}
+
+model SpConditionRecord {
+  id          Int      @id @default(autoincrement())
+  ulid        String   @unique @default(uuid())
+  spId        Int      @map("sp_id")
+  date        String
+  month       String
+  year        String
+  tagCd       String
+  description String
+  value       String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  sp          Sp       @relation(fields: [spId], references: [id])
+
+  @@map("sp_condition_records")
 }

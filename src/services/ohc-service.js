@@ -158,6 +158,7 @@ export class OHCMonitoringSystem {
                 sp: true,
                 cycle: { include: { cycleDescription: true } },
                 ohcConditions: true,
+                ohcConditionRecord: true,
                 currentMotorLifterAsset: { select: { value: true } },
                 currentMotorTransferAsset: { select: { value: true } },
                 tempMotorLifterAsset: { select: { value: true } },
@@ -171,6 +172,7 @@ export class OHCMonitoringSystem {
                 ohc: { select: { name: true } },
                 cycle: { include: { cycleDescription: true } },
                 spConditions: { include: { asset: true } },
+                spConditionRecord: true,
             }
         });
 
@@ -506,6 +508,7 @@ export const updateCycle = async (request) => {
 
     // Determine the condition table and query based on `isOhc`
     const conditionTable = data.isOhc ? prisma.ohcCondition : prisma.spCondition;
+    const recordTable = data.isOhc ? prisma.ohcConditionRecord : prisma.spConditionRecord;
     const queryCondition = data.isOhc
         ? { tagCd: data.tagCd, ohcId: data.ohc }
         : { assetTagCd: data.tagCd };
@@ -545,6 +548,27 @@ export const updateCycle = async (request) => {
     if (dataHelper.cycleAsset.includes(tagCd)) {
         await assetService.processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping);
     }
+
+    // Create new record entry
+    const recordData = {
+        tagCd: data.isOhc ? data.tagCd : data.tagCd,
+        date: moment().format('DD'),
+        month: moment().format('MMMM'),
+        year: moment().format('YYYY'),
+        description: existingCondition.name,
+        value: newValue,
+    };
+
+    if (data.isOhc) {
+        recordData.ohcId = data.ohc;
+    } else {
+        recordData.spId = existingCondition.spId; // Assuming spId is available in existingCondition
+    }
+
+    // Save the record
+    await recordTable.create({
+        data: recordData
+    });
 
     // Return the updated record
     return conditionTable.findFirst({
