@@ -89,6 +89,10 @@ app.use("/api", router);
 
 // Error handling
 app.use(errorMiddleware);
+app.all("/", function (req, res) {
+    res.status(200).send("SERVER IS RUNNING");
+});
+
 app.use("*", function (req, res) {
     res.status(404).send("PAGE NOT FOUND");
 });
