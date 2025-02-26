@@ -549,26 +549,46 @@ export const updateCycle = async (request) => {
         await assetService.processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping);
     }
 
-    // Create new record entry
-    const recordData = {
-        tagCd: data.isOhc ? data.tagCd : data.tagCd,
-        date: moment().format('DD'),
-        month: moment().format('MMMM'),
-        year: moment().format('YYYY'),
-        description: existingCondition.name,
-        value: newValue,
-    };
+    if (updatedData.actualValue > updatedData.standardValue) {
+        const today = moment().format('DD')
+        const month = moment().format('MMMM')
+        const year = moment().format('YYYY')
 
-    if (data.isOhc) {
-        recordData.ohcId = data.ohc;
-    } else {
-        recordData.spId = existingCondition.spId; // Assuming spId is available in existingCondition
+        const recordQueryCondition = data.isOhc
+            ? {
+                ohcId: data.ohc,
+                tagCd: data.tagCd,
+            }
+            : {
+                spId: existingCondition.spId,
+                tagCd: data.tagCd,
+            };
+
+        const existingRecord = await recordTable.findFirst({
+            where: recordQueryCondition,
+            orderBy: { createdAt: 'desc' }
+        });
+
+        const counterValue = existingRecord ? existingRecord.counter + 1 : 1;
+        const recordData = {
+            tagCd: data.tagCd,
+            date: today,
+            month: month,
+            year: year,
+            description: existingCondition.name,
+            counter: counterValue,
+        };
+
+        if (data.isOhc) {
+            recordData.ohcId = data.ohc;
+        } else {
+            recordData.spId = existingCondition.spId;
+        }
+
+        await recordTable.create({
+            data: recordData
+        });
     }
-
-    // Save the record
-    await recordTable.create({
-        data: recordData
-    });
 
     // Return the updated record
     return conditionTable.findFirst({

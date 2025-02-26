@@ -226,7 +226,7 @@ model OhcConditionRecord {
   year        String
   tagCd       String
   description String
-  value       String
+  counter     Int
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   ohc         Ohc      @relation(fields: [ohcId], references: [id])
@@ -243,7 +243,7 @@ model SpConditionRecord {
   year        String
   tagCd       String
   description String
-  value       String
+  counter     Int
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   sp          Sp       @relation(fields: [spId], references: [id])
