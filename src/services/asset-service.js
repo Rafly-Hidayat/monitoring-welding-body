@@ -75,7 +75,7 @@ const updateAsset = async (request) => {
             data: { ohcId }
         })
     }
-    await createWarningRecords()
+    createWarningRecords()
 
     valueChanges.push({
         groupName: '',
@@ -85,9 +85,9 @@ const updateAsset = async (request) => {
         changed: oldValue !== newValue
     });
 
-    await processConditionUpdates(valueChanges, dataHelper.sensorConditionMapping);
+    processConditionUpdates(valueChanges, dataHelper.sensorConditionMapping);
     if (dataHelper.cycleAsset.includes(data.tagCd)) {
-        await processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping);
+        processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping);
     }
 
     return updateAsset;
@@ -177,7 +177,7 @@ const updateAssetInterval = async () => {
         'EM100F', 'EM1011', 'EM101C', 'EM101A'
     ];
     await updateOhcAssignments(sps);
-
+    console.log('object')
     // Sensor updates for different locations
     const allSensors = {
         sp1: ['X700', 'X701', 'X702', 'X703'],
@@ -250,10 +250,10 @@ async function updateOhcAssignments(sps) {
                     data: {
                         condition: 'No Body',
                         cycleTime: getRandomVariation(98, 5),
-                        currentMotorLifter: getRandomVariation(230, 20),
-                        currentMotorTransfer: getRandomVariation(150, 15),
-                        tempMotorLifter: getRandomVariation(60, 5),
-                        tempMotorTransfer: getRandomVariation(40, 5),
+                        // currentMotorLifter: getRandomVariation(230, 20),
+                        // currentMotorTransfer: getRandomVariation(150, 15),
+                        // tempMotorLifter: getRandomVariation(60, 5),
+                        // tempMotorTransfer: getRandomVariation(40, 5),
                         okCondition: Math.floor(getRandomVariation(843, 50)),
                         ngCondition: Math.floor(getRandomVariation(157, 20))
                     }
