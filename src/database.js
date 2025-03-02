@@ -8,4 +8,9 @@ if (!globalForPrisma.prisma) {
 
 const prisma = globalForPrisma.prisma;
 
+process.on('SIGTERM', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
 export default prisma;

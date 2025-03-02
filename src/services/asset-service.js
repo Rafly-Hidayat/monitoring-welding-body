@@ -1,5 +1,6 @@
 import prisma from "../database.js"
 import moment from 'moment-timezone';
+import NodeCache from 'node-cache'
 import { ResponseError } from "../err/err-response.js"
 import { createAssetValidation, resetCycleValidation, updateAssetValidation } from "../validation/asset-schema.js"
 import { validation } from "../validation/validation.js"
@@ -8,6 +9,18 @@ import 'moment/locale/id.js';
 import dataHelper from "../helper/data-helper.js";
 
 moment.tz.setDefault("Asia/Jakarta");
+const cache = new NodeCache({ stdTTL: 6000 });
+
+// Cache mapping dan threshold
+const getThresholds = () => {
+    const cacheKey = 'thresholds';
+    let thresholds = cache.get(cacheKey);
+    if (!thresholds) {
+        thresholds = ohcService.MONITORING_CONFIG.THRESHOLDS;
+        cache.set(cacheKey, thresholds);
+    }
+    return thresholds;
+};
 
 const createAsset = async (request) => {
     const data = validation(createAssetValidation, request)
@@ -40,73 +53,82 @@ const getAssetById = async (ulid) => {
 }
 
 const updateAsset = async (request) => {
-    const data = validation(updateAssetValidation, request)
+    const data = validation(updateAssetValidation, request);
 
-    const asset = await prisma.asset.findFirst({
-        where: { tagCd: data.tagCd }
-    })
-
-    if (!asset) {
-        throw new ResponseError(404, "Asset not found")
-    }
-
-    const oldValue = asset.value;
-    const newValue = data.value;
-    const valueChanges = []
-
-    delete data.id
-
-    const updateAsset = await prisma.asset.update({
-        where: { id: asset.id },
-        data
-    })
-
-    const sp = await prisma.sp.findFirst({
-        where: { assetTagCd: updateAsset.tagCd }
-    });
-
-    if (sp) {
-        const ohc = await prisma.ohc.findFirst({
-            where: { name: `OHC ${updateAsset.value}` }
+    // Gunakan transaction untuk semua operasi database terkait
+    return await prisma.$transaction(async (tx) => {
+        const asset = await tx.asset.findFirst({
+            where: { tagCd: data.tagCd },
+            select: { id: true, value: true, tagCd: true }
         });
-        const ohcId = ohc?.id || null;
-        await prisma.sp.update({
-            where: { id: sp.id },
-            data: { ohcId }
-        })
-    }
-    createWarningRecords()
 
-    valueChanges.push({
-        groupName: '',
-        tagCd: data.tagCd,
-        oldValue,
-        newValue,
-        changed: oldValue !== newValue
+        if (!asset) {
+            throw new ResponseError(404, "Asset not found");
+        }
+
+        const oldValue = asset.value;
+        const newValue = data.value;
+        delete data.id;
+
+        const updateAsset = await tx.asset.update({
+            where: { id: asset.id },
+            data,
+            select: { id: true, tagCd: true, value: true }
+        });
+
+        if (newValue !== oldValue) {
+            const sp = await tx.sp.findFirst({
+                where: { assetTagCd: updateAsset.tagCd },
+                select: { id: true }
+            });
+
+            if (sp) {
+                const ohc = await tx.ohc.findFirst({
+                    where: { name: `OHC ${updateAsset.value}` },
+                    select: { id: true }
+                });
+
+                if (sp) {
+                    await tx.sp.update({
+                        where: { id: sp.id },
+                        data: { ohcId: ohc?.id || null }
+                    });
+                }
+            }
+
+            const valueChanges = [{
+                groupName: '',
+                tagCd: data.tagCd,
+                oldValue,
+                newValue,
+                changed: true
+            }];
+
+            await Promise.all([
+                processConditionUpdates(valueChanges, dataHelper.sensorConditionMapping, tx),
+                dataHelper.cycleAsset.includes(data.tagCd)
+                    ? processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping, tx)
+                    : Promise.resolve()
+            ]);
+        }
+
+        // Jalankan createWarningRecords di luar transaction utama atau paralelkan jika tidak kritikal
+        setTimeout(() => createWarningRecords(), 0);
+
+        return updateAsset;
     });
-
-    processConditionUpdates(valueChanges, dataHelper.sensorConditionMapping);
-    if (dataHelper.cycleAsset.includes(data.tagCd)) {
-        processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping);
-    }
-
-    return updateAsset;
-}
+};
 
 const createWarningRecords = async () => {
-    const { MOTOR_CURRENT, MOTOR_TEMP } = ohcService.MONITORING_CONFIG.THRESHOLDS;
+    const { MOTOR_CURRENT, MOTOR_TEMP } = getThresholds();
     const ohcs = await prisma.ohc.findMany({
         orderBy: { name: 'asc' },
-        include: {
-            asset: true,
-            sp: true,
-            cycle: { include: { cycleDescription: true } },
-            ohcConditions: true,
-            ohcConditionRecord: true,
+        select: {
+            name: true,
             currentMotorLifterAsset: { select: { value: true } },
             currentMotorTransferAsset: { select: { value: true } },
             tempMotorLifterAsset: { select: { value: true } },
-            tempMotorTransferAsset: { select: { value: true } },
+            tempMotorTransferAsset: { select: { value: true } }
         }
     });
 
@@ -114,29 +136,30 @@ const createWarningRecords = async () => {
     const warningRecords = [];
 
     for (const ohc of ohcs) {
-        let type = null
-        if (Number(ohc.currentMotorLifterAsset.value) > MOTOR_CURRENT.MAX) {
-            type = 'High Current Motor Lifter';
+        const warnings = [];
+
+        if (Number(ohc.currentMotorLifterAsset?.value) > MOTOR_CURRENT.MAX) {
+            warnings.push('High Current Motor Lifter');
         }
-        if (Number(ohc.currentMotorTransferAsset.value) > MOTOR_CURRENT.MAX) {
-            type = 'High Current Motor Transfer';
+        if (Number(ohc.currentMotorTransferAsset?.value) > MOTOR_CURRENT.MAX) {
+            warnings.push('High Current Motor Transfer');
         }
-        if (Number(ohc.tempMotorLifterAsset.value) > MOTOR_TEMP.MAX) {
-            type = 'High Temp Motor Lifter';
+        if (Number(ohc.tempMotorLifterAsset?.value) > MOTOR_TEMP.MAX) {
+            warnings.push('High Temp Motor Lifter');
         }
-        if (Number(ohc.tempMotorTransferAsset.value) > MOTOR_TEMP.MAX) {
-            type = 'High Temp Motor Transfer'
+        if (Number(ohc.tempMotorTransferAsset?.value) > MOTOR_TEMP.MAX) {
+            warnings.push('High Temp Motor Transfer');
         }
-        if (type) {
-            const warningRecord = {
+
+        warnings.forEach(type => {
+            warningRecords.push({
                 date: currentDate.format('DD'),
                 month: currentDate.format('MMMM'),
                 year: currentDate.format('YYYY'),
                 type,
                 detail: ohc.name,
-            };
-            warningRecords.push(warningRecord);
-        }
+            });
+        });
     }
 
     if (warningRecords.length > 0) {
@@ -324,128 +347,119 @@ const processSensorUpdates = async (allSensors) => {
     return valueChanges;
 };
 
-const processCycleUpdates = async (changes, sensorCycleMapping) => {
-    const cycleCache = new Map();
-    const updateLog = [];
+const processCycleUpdates = async (changes, sensorCycleMapping, tx) => {
+    const prismaClient = tx || prisma;
+    const relevantChanges = changes.filter(change =>
+        change.changed &&
+        sensorCycleMapping[change.tagCd] &&
+        change.oldValue === sensorCycleMapping[change.tagCd].condition.from &&
+        change.newValue === sensorCycleMapping[change.tagCd].condition.to
+    );
 
-    for (const change of changes) {
-        if (!change.changed) continue;
+    if (relevantChanges.length === 0) return [];
 
+    // Dapatkan semua cycle yang diperlukan dalam satu query
+    const cycleNames = [...new Set(relevantChanges.map(change =>
+        sensorCycleMapping[change.tagCd]?.cycleName
+    ).filter(Boolean))];
+
+    const cycles = await prismaClient.cycle.findMany({
+        where: { name: { in: cycleNames } },
+        include: { cycleDescription: true }
+    });
+
+    const cycleMap = new Map(cycles.map(cycle => [cycle.name, cycle]));
+    const updatePromises = [];
+
+    for (const change of relevantChanges) {
         const mapping = sensorCycleMapping[change.tagCd];
-        if (!mapping) continue;
+        const cycle = cycleMap.get(mapping.cycleName);
 
-        // Cek kondisi perubahan
-        const { condition } = mapping;
-        if (change.oldValue !== condition.from || change.newValue !== condition.to) {
-            continue;
-        }
+        if (!cycle) continue;
 
-        try {
-            const { cycleName, descriptionName } = mapping;
+        const description = cycle.cycleDescription.find(item =>
+            item.name === mapping.descriptionName
+        );
 
-            // Get cycle from cache or database
-            let cycle = cycleCache.get(cycleName);
-            if (!cycle) {
-                cycle = await prisma.cycle.findFirst({
-                    where: { name: cycleName },
-                    include: { cycleDescription: true }
-                });
+        if (!description) continue;
 
-                if (!cycle) {
-                    throw new Error(`Cycle ${cycleName} not found`);
-                }
-
-                cycleCache.set(cycleName, cycle);
-            }
-
-            const description = cycle.cycleDescription.find(item => item.name === descriptionName);
-            if (!description) {
-                throw new Error(`Description ${descriptionName} not found in cycle ${cycleName}`);
-            }
-
-            // Update description
-            const updatedDescription = await prisma.cycleDescription.update({
+        updatePromises.push(
+            prismaClient.cycleDescription.update({
                 where: { id: description.id },
                 data: { actualValue: description.actualValue + 1 }
-            });
-
-            updateLog.push({
-                tagCd: change.tagCd,
-                cycleName,
-                descriptionName,
-                oldValue: description.actualValue,
-                newValue: updatedDescription.actualValue,
-                timestamp: new Date()
-            });
-
-        } catch (error) {
-            console.error(`Error processing change for ${change.tagCd}:`, error);
-        }
+            })
+        );
     }
 
-    return updateLog;
+    // Eksekusi semua update secara paralel
+    await Promise.all(updatePromises);
+
+    return relevantChanges.map(change => ({
+        tagCd: change.tagCd,
+        cycleName: sensorCycleMapping[change.tagCd].cycleName,
+        descriptionName: sensorCycleMapping[change.tagCd].descriptionName,
+        timestamp: new Date()
+    }));
 };
 
-const processConditionUpdates = async (changes, sensorConditionMapping) => {
-    const conditionCache = new Map();
+const processConditionUpdates = async (changes, sensorConditionMapping, tx) => {
+    const prismaClient = tx || prisma;
+    const relevantChanges = changes.filter(change =>
+        change.changed &&
+        sensorConditionMapping[change.tagCd] &&
+        change.oldValue === sensorConditionMapping[change.tagCd].condition.from &&
+        change.newValue === sensorConditionMapping[change.tagCd].condition.to
+    );
 
-    for (const change of changes) {
-        if (!change.changed) continue;
+    if (relevantChanges.length === 0) return;
 
-        const mapping = sensorConditionMapping[change.tagCd];
-        if (!mapping) continue;
+    // Pisahkan berdasarkan tipe kondisi
+    const spChanges = relevantChanges.filter(change =>
+        dataHelper.spConditionAsset.includes(change.tagCd)
+    );
 
-        // Cek kondisi perubahan
-        const { condition } = mapping;
-        if (change.oldValue !== condition.from || change.newValue !== condition.to) {
-            continue;
-        }
+    const ohcChanges = relevantChanges.filter(change =>
+        dataHelper.ohcConditionAsset.includes(change.tagCd)
+    );
 
-        try {
-            const { conditionName, descriptionName } = mapping;
+    // Dapatkan semua kondisi SP yang diperlukan dalam satu query
+    if (spChanges.length > 0) {
+        const spDescNames = [...new Set(spChanges.map(change =>
+            sensorConditionMapping[change.tagCd].descriptionName
+        ))];
 
-            // Get condition from cache or database
-            let condition = conditionCache.get(conditionName);
-            if (dataHelper.spConditionAsset.includes(change.tagCd)) {
-                if (!condition) {
-                    condition = await prisma.spCondition.findFirst({
-                        where: { name: descriptionName },
-                    });
+        const spConditions = await prismaClient.spCondition.findMany({
+            where: { name: { in: spDescNames } }
+        });
 
-                    if (!condition) {
-                        throw new Error(`condition ${conditionName} not found`);
-                    }
+        const updatePromises = spConditions.map(condition =>
+            prismaClient.spCondition.update({
+                where: { id: condition.id },
+                data: { actualValue: condition.actualValue + 1 }
+            })
+        );
 
-                    conditionCache.set(conditionName, condition);
-                }
+        await Promise.all(updatePromises);
+    }
 
-                // Update description
-                await prisma.spCondition.update({
-                    where: { id: condition.id },
-                    data: { actualValue: condition.actualValue + 1 }
-                });
-            } else if (dataHelper.ohcConditionAsset.includes(change.tagCd)) {
-                if (!condition) {
-                    condition = await prisma.ohcCondition.findFirst({
-                        where: { name: descriptionName },
-                    });
+    // Dapatkan semua kondisi OHC yang diperlukan dalam satu query
+    if (ohcChanges.length > 0) {
+        const ohcDescNames = [...new Set(ohcChanges.map(change =>
+            sensorConditionMapping[change.tagCd].descriptionName
+        ))];
 
-                    if (!condition) {
-                        throw new Error(`condition ${conditionName} not found`);
-                    }
+        const ohcConditions = await prismaClient.ohcCondition.findMany({
+            where: { name: { in: ohcDescNames } }
+        });
 
-                    conditionCache.set(conditionName, condition);
-                }
+        const updatePromises = ohcConditions.map(condition =>
+            prismaClient.ohcCondition.update({
+                where: { id: condition.id },
+                data: { actualValue: condition.actualValue + 1 }
+            })
+        );
 
-                // Update description
-                await prisma.ohcCondition.update({
-                    where: { id: condition.id },
-                    data: { actualValue: condition.actualValue + 1 }
-                });
-            }
-        } catch (error) {
-            console.error(`Error processing change for ${change.tagCd}:`, error);
-        }
+        await Promise.all(updatePromises);
     }
 };
 

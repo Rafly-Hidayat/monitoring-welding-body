@@ -1,6 +1,7 @@
 import moment from 'moment-timezone';
 import cron from 'node-cron';
 import prisma from "../database.js";
+import NodeCache from 'node-cache'
 import assetService from './asset-service.js';
 import { updateCycleValidation } from '../validation/ohc-schema.js';
 import { validation } from '../validation/validation.js';
@@ -26,6 +27,19 @@ const MONITORING_CONFIG = {
             MAX: 90
         }
     }
+};
+
+const cache = new NodeCache({ stdTTL: 6000 });
+
+// Cache mapping dan threshold
+const getThresholds = () => {
+    const cacheKey = 'thresholds';
+    let thresholds = cache.get(cacheKey);
+    if (!thresholds) {
+        thresholds = MONITORING_CONFIG.THRESHOLDS;
+        cache.set(cacheKey, thresholds);
+    }
+    return thresholds;
 };
 
 export class TimeUtils {
@@ -75,7 +89,7 @@ export class MetricsCalculator {
     }
 
     static checkAbnormalities(data) {
-        const { MOTOR_CURRENT, MOTOR_TEMP } = MONITORING_CONFIG.THRESHOLDS;
+        const { MOTOR_CURRENT, MOTOR_TEMP } = getThresholds();
 
         return [
             this.isOutOfRange(Number(data.currentMotorLifterAsset.value), MOTOR_CURRENT.MIN, MOTOR_CURRENT.MAX),
@@ -107,23 +121,23 @@ export class OHCMonitoringSystem {
             const stopTime = Number(ohc.stopTime) + (isStopped ? 1 : 0);
 
             // Get latest OHC data after asset service update
-            const updatedOhc = await prisma.ohc.findUnique({
-                where: { id: ohc.id },
-                include: {
-                    currentMotorLifterAsset: { select: { value: true } },
-                    currentMotorTransferAsset: { select: { value: true } },
-                    tempMotorLifterAsset: { select: { value: true } },
-                    tempMotorTransferAsset: { select: { value: true } },
-                }
-            });
+            // const updatedOhc = await prisma.ohc.findUnique({
+            //     where: { id: ohc.id },
+            //     include: {
+            //         currentMotorLifterAsset: { select: { value: true } },
+            //         currentMotorTransferAsset: { select: { value: true } },
+            //         tempMotorLifterAsset: { select: { value: true } },
+            //         tempMotorTransferAsset: { select: { value: true } },
+            //     }
+            // });
 
             // Calculate metrics
             const efficiency = MetricsCalculator.calculateEfficiency(runningTime, stopTime);
             const performance = MetricsCalculator.calculatePerformance(ohc.okCondition, ohc.ngCondition);
-            const abnormalityCount = MetricsCalculator.checkAbnormalities(updatedOhc);
+            // const abnormalityCount = MetricsCalculator.checkAbnormalities(updatedOhc);
 
             // Update OHC with new calculations
-            await prisma.ohc.update({
+            prisma.ohc.update({
                 where: { id: ohc.id },
                 data: {
                     status,
@@ -132,7 +146,7 @@ export class OHCMonitoringSystem {
                     efficiency: parseFloat(efficiency),
                     // performance: parseFloat(performance),
                     performance: parseFloat(defaultPerformance),
-                    abnormalityCount
+                    abnormalityCount: 0
                 }
             });
         }
@@ -212,7 +226,7 @@ export class OHCMonitoringSystem {
             return "hijau";
         }
 
-        const { MOTOR_CURRENT, MOTOR_TEMP } = MONITORING_CONFIG.THRESHOLDS;
+        const { MOTOR_CURRENT, MOTOR_TEMP } = getThresholds();
 
         const startTime = moment().subtract(24, 'hours').toDate();
 
@@ -505,95 +519,103 @@ export class OHCMonitoringService {
 
 export const updateCycle = async (request) => {
     const data = validation(updateCycleValidation, request);
+    const isOhc = data.isOhc;
 
-    // Determine the condition table and query based on `isOhc`
-    const conditionTable = data.isOhc ? prisma.ohcCondition : prisma.spCondition;
-    const recordTable = data.isOhc ? prisma.ohcConditionRecord : prisma.spConditionRecord;
-    const queryCondition = data.isOhc
+    const conditionTable = isOhc ? prisma.ohcCondition : prisma.spCondition;
+    const recordTable = isOhc ? prisma.ohcConditionRecord : prisma.spConditionRecord;
+    const queryCondition = isOhc
         ? { tagCd: data.tagCd, ohcId: data.ohc }
         : { assetTagCd: data.tagCd };
 
-    // Find the existing condition record
     const existingCondition = await conditionTable.findFirst({
         where: queryCondition,
+        select: {
+            id: true,
+            value: true,
+            name: true,
+            standardValue: true,
+            actualValue: true,
+            spId: isOhc ? false : true,
+        }
     });
 
     if (!existingCondition) {
         throw new ResponseError(404, "Data tagCd not found");
     }
 
-    // Update the condition record
     const updatedData = await conditionTable.update({
         where: { id: existingCondition.id },
         data: { value: data.value },
+        select: {
+            tagCd: true,
+            ohcId: isOhc ? true : false,
+            assetTagCd: isOhc ? false : true,
+            value: true,
+            actualValue: true,
+            standardValue: true,
+        }
     });
 
-    // Track value changes
-    const oldValue = existingCondition.value;
-    const newValue = updatedData.value;
-    const tagCd = data.isOhc
+    const tagCd = isOhc
         ? `${updatedData.tagCd}${updatedData.ohcId}`
         : updatedData.assetTagCd;
 
     const valueChanges = [{
         groupName: '',
         tagCd,
-        oldValue,
-        newValue,
-        changed: oldValue !== newValue,
+        oldValue: existingCondition.value,
+        newValue: updatedData.value,
+        changed: existingCondition.value !== updatedData.value,
     }];
 
-    // Process condition and cycle updates
-    await assetService.processConditionUpdates(valueChanges, dataHelper.sensorConditionMapping);
+    const processPromises = [
+        assetService.processConditionUpdates(valueChanges, dataHelper.sensorConditionMapping)
+    ];
+
     if (dataHelper.cycleAsset.includes(tagCd)) {
-        await assetService.processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping);
+        processPromises.push(
+            assetService.processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping)
+        );
     }
 
     if (updatedData.actualValue > updatedData.standardValue) {
-        const today = moment().format('DD')
-        const month = moment().format('MMMM')
-        const year = moment().format('YYYY')
-
-        const recordQueryCondition = data.isOhc
-            ? {
-                ohcId: data.ohc,
-                tagCd: data.tagCd,
-            }
-            : {
-                spId: existingCondition.spId,
-                tagCd: data.tagCd,
-            };
-
-        const existingRecord = await recordTable.findFirst({
-            where: recordQueryCondition,
-            orderBy: { createdAt: 'desc' }
-        });
-
-        const counterValue = existingRecord ? existingRecord.counter + 1 : 1;
+        const now = moment();
         const recordData = {
             tagCd: data.tagCd,
-            date: today,
-            month: month,
-            year: year,
+            date: now.format('DD'),
+            month: now.format('MMMM'),
+            year: now.format('YYYY'),
             description: existingCondition.name,
-            counter: counterValue,
         };
 
-        if (data.isOhc) {
+        if (isOhc) {
             recordData.ohcId = data.ohc;
         } else {
             recordData.spId = existingCondition.spId;
         }
 
-        await recordTable.create({
-            data: recordData
-        });
+        processPromises.push(
+            (async () => {
+                const recordQueryCondition = isOhc
+                    ? { ohcId: data.ohc, tagCd: data.tagCd }
+                    : { spId: existingCondition.spId, tagCd: data.tagCd };
+
+                const existingRecord = await recordTable.findFirst({
+                    where: recordQueryCondition,
+                    orderBy: { createdAt: 'desc' },
+                    select: { counter: true }
+                });
+
+                recordData.counter = existingRecord ? existingRecord.counter + 1 : 1;
+
+                return recordTable.create({ data: recordData });
+            })()
+        );
     }
 
-    // Return the updated record
-    return conditionTable.findFirst({
-        where: queryCondition,
-    });
+    await Promise.all(processPromises);
+
+    return updatedData;
 };
 
 export default { MONITORING_CONFIG }
