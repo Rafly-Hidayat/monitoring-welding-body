@@ -55,68 +55,67 @@ const getAssetById = async (ulid) => {
 const updateAsset = async (request) => {
     const data = validation(updateAssetValidation, request);
 
-    // Gunakan transaction untuk semua operasi database terkait
-    return await prisma.$transaction(async (tx) => {
-        const asset = await tx.asset.findFirst({
+    const updateResult = await prisma.$transaction(async (tx) => {
+        // Cari asset berdasarkan tagCd
+        const asset = await tx.asset.findUnique({
             where: { tagCd: data.tagCd },
             select: { id: true, value: true, tagCd: true }
         });
 
-        if (!asset) {
-            throw new ResponseError(404, "Asset not found");
-        }
+        if (!asset) throw new ResponseError(404, "Asset not found");
 
         const oldValue = asset.value;
         const newValue = data.value;
         delete data.id;
 
-        const updateAsset = await tx.asset.update({
+        // Update asset
+        const updatedAsset = await tx.asset.update({
             where: { id: asset.id },
             data,
             select: { id: true, tagCd: true, value: true }
         });
 
         if (newValue !== oldValue) {
-            const sp = await tx.sp.findFirst({
-                where: { assetTagCd: updateAsset.tagCd },
+            const spPromise = tx.sp.findFirst({
+                where: { assetTagCd: updatedAsset.tagCd },
                 select: { id: true }
             });
 
+            const ohcPromise = tx.ohc.findFirst({
+                where: { name: `OHC ${updatedAsset.value}` },
+                select: { id: true }
+            });
+
+            const [sp, ohc] = await Promise.all([spPromise, ohcPromise]);
+
             if (sp) {
-                const ohc = await tx.ohc.findFirst({
-                    where: { name: `OHC ${updateAsset.value}` },
-                    select: { id: true }
+                await tx.sp.update({
+                    where: { id: sp.id },
+                    data: { ohcId: ohc?.id || null }
                 });
-
-                if (sp) {
-                    await tx.sp.update({
-                        where: { id: sp.id },
-                        data: { ohcId: ohc?.id || null }
-                    });
-                }
             }
-
-            const valueChanges = [{
-                groupName: '',
-                tagCd: data.tagCd,
-                oldValue,
-                newValue,
-                changed: true
-            }];
-
-            await Promise.all([
-                processConditionUpdates(valueChanges, dataHelper.sensorConditionMapping, tx),
-                dataHelper.cycleAsset.includes(data.tagCd)
-                    ? processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping, tx)
-                    : Promise.resolve()
-            ]);
         }
 
-        // Jalankan createWarningRecords di luar transaction utama atau paralelkan jika tidak kritikal
-        setTimeout(() => createWarningRecords(), 0);
-
-        return updateAsset;
+        return updatedAsset;
     });
+
+    if (data.value !== updateResult.value) {
+        const valueChanges = [{
+            groupName: '',
+            tagCd: data.tagCd,
+            oldValue: updateResult.value,
+            newValue: data.value,
+            changed: true
+        }];
+
+        processConditionUpdates(valueChanges, dataHelper.sensorConditionMapping);
+        if (dataHelper.cycleAsset.includes(data.tagCd)) {
+            processCycleUpdates(valueChanges, dataHelper.sensorCycleMapping);
+        }
+    }
+
+    createWarningRecords();
+    return updateResult;
 };
 
 const createWarningRecords = async () => {
