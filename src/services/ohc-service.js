@@ -547,7 +547,7 @@ export const updateCycle = async (request) => {
         where: { id: existingCondition.id },
         data: { value: data.value },
         select: {
-            tagCd: true,
+            tagCd: isOhc ? true : false,
             ohcId: isOhc ? true : false,
             assetTagCd: isOhc ? false : true,
             value: true,
@@ -598,7 +598,7 @@ export const updateCycle = async (request) => {
             (async () => {
                 const recordQueryCondition = isOhc
                     ? { ohcId: data.ohc, tagCd: data.tagCd }
-                    : { spId: existingCondition.spId, tagCd: data.tagCd };
+                    : { spId: existingCondition.spId, assetTagCd: data.tagCd };
 
                 const existingRecord = await recordTable.findFirst({
                     where: recordQueryCondition,
